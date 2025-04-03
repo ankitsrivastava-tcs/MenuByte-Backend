@@ -1,17 +1,18 @@
 package com.menubyte.dto;
 
 import com.menubyte.entity.Item;
-
 import com.menubyte.entity.Menu;
 import lombok.Data;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Data
 public class MenuDTO {
     private Long id;
     private String businessName;
     private List<CategoryDTO> categories;
+    private List<Item> items; // Added to support item updates
 
     public MenuDTO(Menu menu) {
         this.id = menu.getId();
@@ -21,5 +22,6 @@ public class MenuDTO {
                 .entrySet().stream()
                 .map(entry -> new CategoryDTO(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
+        this.items = menu.getItems(); // Include items for updates
     }
 }

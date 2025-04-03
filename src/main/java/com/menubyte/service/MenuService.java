@@ -1,18 +1,16 @@
-/**
- * Service for managing Menu entities.
- * Handles menu retrieval for a user's business.
- *
- * @author Ankit Srivastava
- */
 package com.menubyte.service;
 
+import com.menubyte.dto.MenuDTO;
 import com.menubyte.entity.Business;
+import com.menubyte.entity.Item;
 import com.menubyte.entity.Menu;
 import com.menubyte.entity.User;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.MenuRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -45,13 +43,42 @@ public class MenuService {
             throw new RuntimeException("Unauthorized! You don't own this business.");
         }
 
-        Menu menu = menuRepository.findByBusinessId(businessId)
+        return menuRepository.findByBusinessId(businessId)
                 .orElseThrow(() -> {
                     log.error("No menu found for business ID: {}", businessId);
                     return new RuntimeException("No menu found for this business.");
                 });
+    }
 
-        log.info("Menu retrieved successfully for business ID: {}", businessId);
+    /**
+     * Find Menu by Business ID.
+     * @param businessId Business ID.
+     * @return Optional of Menu.
+     */
+    public Optional<Menu> findByBusinessId(Long businessId) {
+        log.info("Finding menu for business ID: {}", businessId);
+        return menuRepository.findByBusinessId(businessId);
+    }
+
+    /**
+     * Updates the items of a menu for a given business and user.
+     */
+    public Menu updateMenuItems(Long businessId, User user, MenuDTO updatedMenuDTO) {
+        log.info("Updating menu items for business ID: {}", businessId);
+
+        Menu menu = getMenuForUserBusiness(businessId, user);
+
+        // Remove existing items and add new ones
+        menu.getItems().clear();
+        for (Item item : updatedMenuDTO.getItems()) {
+            item.setMenu(menu);  // Ensure items belong to the same menu
+            menu.getItems().add(item);
+        }
+
+        // Save updated menu
+        menu = menuRepository.save(menu);
+        log.info("Menu items updated successfully for business ID: {}", businessId);
+
         return menu;
     }
 }

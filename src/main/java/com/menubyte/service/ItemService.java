@@ -1,20 +1,23 @@
 /**
  * Service for managing Item entities.
- * Handles item creation, retrieval, and updates.
+ * Handles item creation, retrieval, updates, and deletion.
  *
  * @author Ankit Srivastava
  */
 package com.menubyte.service;
 
 import com.menubyte.entity.Business;
+import com.menubyte.entity.Category;
 import com.menubyte.entity.Item;
 import com.menubyte.entity.Menu;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.ItemRepository;
+import com.menubyte.repository.CategoryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -22,14 +25,16 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final BusinessRepository businessRepository;
+    private final CategoryRepository categoryRepository;
 
-    public ItemService(ItemRepository itemRepository, BusinessRepository businessRepository) {
+    public ItemService(ItemRepository itemRepository, BusinessRepository businessRepository, CategoryRepository categoryRepository) {
         this.itemRepository = itemRepository;
         this.businessRepository = businessRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     /**
-     * Create an item for a business's menu.
+     * Creates an item for a business's menu.
      * @param businessId Business ID.
      * @param item Item details.
      * @return Created Item object.
@@ -48,14 +53,21 @@ public class ItemService {
             throw new RuntimeException("Menu not found for this business");
         }
 
+        Category category = categoryRepository.findById(item.getCategory().getId())
+                .orElseThrow(() -> {
+                    log.error("Category not found with ID: {}", item.getCategory().getId());
+                    return new RuntimeException("Category not found");
+                });
+
         item.setMenu(menu);
+        item.setCategory(category);
         Item savedItem = itemRepository.save(item);
         log.info("Item created successfully: {}", savedItem);
         return savedItem;
     }
 
     /**
-     * Get all items for a business's menu.
+     * Retrieves all items for a business's menu.
      * @param businessId Business ID.
      * @return List of Items.
      */
@@ -79,18 +91,28 @@ public class ItemService {
     }
 
     /**
-     * Update an existing item.
+     * Retrieves an item by its ID.
+     * @param itemId The ID of the item to retrieve.
+     * @return The found item.
+     */
+    public Item getItemById(Long itemId) {
+        log.info("Fetching item with ID: {}", itemId);
+        return itemRepository.findById(itemId)
+                .orElseThrow(() -> {
+                    log.error("Item not found with ID: {}", itemId);
+                    return new RuntimeException("Item not found");
+                });
+    }
+
+    /**
+     * Updates an existing item.
      * @param itemId Item ID.
      * @param updatedItem Updated item details.
      * @return Updated Item object.
      */
     public Item updateItem(Long itemId, Item updatedItem) {
         log.info("Updating item with ID: {}", itemId);
-        Item existingItem = itemRepository.findById(itemId)
-                .orElseThrow(() -> {
-                    log.error("Item not found with ID: {}", itemId);
-                    return new RuntimeException("Item not found");
-                });
+        Item existingItem = getItemById(itemId);
 
         existingItem.setItemName(updatedItem.getItemName());
         existingItem.setItemDescription(updatedItem.getItemDescription());
@@ -105,5 +127,16 @@ public class ItemService {
         Item updated = itemRepository.save(existingItem);
         log.info("Item updated successfully: {}", updated);
         return updated;
+    }
+
+    /**
+     * Deletes an item by its ID.
+     * @param itemId Item ID.
+     */
+    public void deleteItem(Long itemId) {
+        log.info("Deleting item with ID: {}", itemId);
+        Item item = getItemById(itemId);
+        itemRepository.delete(item);
+        log.info("Item deleted successfully.");
     }
 }

@@ -1,6 +1,6 @@
 package com.menubyte.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -19,6 +19,9 @@ public class Category {
 
     @ManyToOne
     @JoinColumn(name = "master_category_id", nullable = false)
-    @JsonBackReference
-    private MasterCategory masterCategory; // Links to MasterCategory
+    @JsonIgnore // Avoids infinite recursion
+    private MasterCategory masterCategory;
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Item> items;
 }

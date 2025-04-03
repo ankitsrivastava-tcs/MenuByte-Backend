@@ -1,8 +1,6 @@
 package com.menubyte.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.menubyte.enums.BusinessType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,15 +19,14 @@ public class Business {
     private String tagline;
 
     @Enumerated(EnumType.STRING)
-    private BusinessType businessType;
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY) // 🔴 Add LAZY loading
+    private com.menubyte.enums.BusinessType businessType;
+
+    @JsonIgnore // Prevents recursion when serializing Business
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonBackReference
     private User user;
 
-    @OneToOne(mappedBy = "business", cascade = CascadeType.ALL, fetch = FetchType.LAZY) // 🔴 Add LAZY loading
+    @OneToOne(mappedBy = "business", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    @JsonBackReference
     private Menu menu;
 }
