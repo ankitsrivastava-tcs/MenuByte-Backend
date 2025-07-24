@@ -1,5 +1,6 @@
 package com.menubyte.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,16 +21,18 @@ public class Item {
     private String itemImage;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.VegNonVeg vegOrNonVeg; // VEG or NON-VEG
+    private com.menubyte.entity.VegNonVeg vegOrNonVeg;
 
     private boolean itemAvailability;
     private boolean bestseller;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER) // <--- Changed to EAGER fetch type
     @JoinColumn(name = "category_id", nullable = false)
-    private Category category; // Links to Category
+    @JsonIgnore // Prevents serialization of the category to avoid circular reference
+    private Category category;
 
     @ManyToOne
     @JoinColumn(name = "menu_id", nullable = false)
-    private Menu menu; // Links to the Menu
+    @JsonIgnore
+    private Menu menu;
 }

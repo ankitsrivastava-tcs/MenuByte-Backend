@@ -52,4 +52,23 @@ public class MenuController {
 
         return ResponseEntity.ok(menuDTO);
     }
+    /**
+     * Updates the items of a menu for a specific business.
+     * @param businessId The ID of the business.
+     * @param userId The ID of the logged-in user.
+     * @param updatedMenu The updated menu object with new items.
+     * @return The updated MenuDTO object.
+     */
+    @PutMapping("/{businessId}")
+    public ResponseEntity<MenuDTO> updateMenuItems(
+            @PathVariable Long businessId,
+            @RequestParam Long userId,
+            @RequestBody MenuDTO updatedMenu) {
+        System.out.println("Received Update Request: " + updatedMenu); // Debugging
+        User user = userService.getUserById(userId);
+        Menu updatedMenuEntity = menuService.updateMenuItems(businessId, user, updatedMenu);
+        return ResponseEntity.ok(new MenuDTO(updatedMenuEntity));
+    }
+
+
 }
