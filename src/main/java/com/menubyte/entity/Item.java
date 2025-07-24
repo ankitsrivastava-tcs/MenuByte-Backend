@@ -26,7 +26,7 @@ public class Item {
     private boolean itemAvailability;
     private boolean bestseller;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER) // <--- Changed to EAGER fetch type
     @JoinColumn(name = "category_id", nullable = false)
     @JsonIgnore // Prevents serialization of the category to avoid circular reference
     private Category category;
