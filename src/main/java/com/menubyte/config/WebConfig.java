@@ -45,7 +45,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**") // Allow all endpoints
                 //.allowedOrigins("http://192.168.29.137:3000") // Allow frontend access
                 .allowedOrigins("http://192.168.29.137:3000") // Allow frontend access
-                .allowedOrigins("https://menu-byte-5lnr6cbhb-ankitsrivastava-tcs-projects.vercel.app") // Allow frontend access
+
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allow specified HTTP methods
                 .allowedHeaders("*"); // Allow all headers
     }
