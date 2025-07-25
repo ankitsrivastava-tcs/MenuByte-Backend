@@ -1,7 +1,6 @@
 package com.menubyte.repository;
 
 import com.menubyte.entity.Item;
-import com.menubyte.entity.Menu;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -54,6 +53,4 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
      * Finds items by name containing a given string (case-insensitive) within a specific menu.
      */
     List<Item> findByMenuIdAndItemNameContainingIgnoreCase(Long menuId, String itemName);
-    List<Item> findByMenu(Menu menu);
-
 }

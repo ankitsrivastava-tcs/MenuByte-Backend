@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BusinessMaster {
+public class BusinessMaster { // Consider renaming to BusinessSubscription or BusinessRegistration
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -19,13 +19,15 @@ public class BusinessMaster {
     private double amountPaid;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.SubscriptionStatus subscriptionStatus; // ACTIVE / INACTIVE
+    private com.menubyte.entity.SubscriptionStatus subscriptionStatus; // Assuming enum is in enums package
 
-    @ManyToOne
+    // No JsonManagedReference/JsonBackReference needed here as it's a one-way relationship for JSON serialization
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user; // Tracks which user registered
 
-    @ManyToOne
+    // No JsonManagedReference/JsonBackReference needed here as it's a one-way relationship for JSON serialization
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
     private Business business; // Tracks the registered business
 }

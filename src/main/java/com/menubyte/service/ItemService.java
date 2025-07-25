@@ -85,7 +85,7 @@ public class ItemService {
             throw new RuntimeException("Menu not found for this business");
         }
 
-        List<Item> items = itemRepository.findByMenu(menu);
+        List<Item> items = itemRepository.findByMenuId(menu.getId());
         log.info("Total items found for business {}: {}", businessId, items.size());
         return items;
     }

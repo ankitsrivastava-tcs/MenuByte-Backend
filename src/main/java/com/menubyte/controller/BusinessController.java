@@ -3,6 +3,7 @@ package com.menubyte.controller;
 import com.menubyte.dto.BusinessDTO;
 import com.menubyte.entity.Business;
 import com.menubyte.service.BusinessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,8 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/business")
+@Slf4j // Enable logging for this controller
+
 public class BusinessController {
 
     private final BusinessService businessService;
@@ -39,9 +42,20 @@ public class BusinessController {
      * @param business The business entity to be created.
      * @return ResponseEntity containing the created business.
      */
-    @PostMapping("/create")
-    public ResponseEntity<Business> createBusiness(@RequestBody Business business) {
-        Business createdBusiness = businessService.createBusiness(business);
+    /**
+     * Creates a new business.
+     * The userId is now passed as a path parameter.
+     *
+     * @param userId The ID of the user creating the business.
+     * @return ResponseEntity containing the created business.
+     */
+    @PostMapping("/create/user/{userId}") // Changed mapping to include userId as path variable
+    public ResponseEntity<Business> createBusiness(
+            @PathVariable Long userId, // userId now comes from path
+            @RequestBody Business business) { // Request body is the DTO
+
+        // Pass the userId and DTO to the service
+        Business createdBusiness = businessService.createBusiness(userId, business);
         return ResponseEntity.ok(createdBusiness);
     }
 
@@ -66,7 +80,7 @@ public class BusinessController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getBusinessesByUser(@PathVariable Long userId) {
         try {
-            List<BusinessDTO> businesses = businessService.getBusinessesByUserId(userId);
+                List<BusinessDTO> businesses = businessService.getBusinessesByUserId(userId);
             return ResponseEntity.ok(businesses);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -78,14 +92,19 @@ public class BusinessController {
      * Updates business details.
      *
      * @param id The ID of the business to be updated.
-     * @param updatedBusiness The updated business entity.
      * @return ResponseEntity containing the updated business.
      */
-    @PutMapping("/{id}")
-    public ResponseEntity<Business> updateBusiness(@PathVariable Long id, @RequestBody Business updatedBusiness) {
-        Business business = businessService.updateBusiness(id, updatedBusiness);
+    @PutMapping("/{id}/user/{userId}") // Updated mapping to include userId as path variable
+    public ResponseEntity<Business> updateBusiness(
+            @PathVariable Long id,
+            @PathVariable Long userId, // userId now comes from path
+            @RequestBody Business businessReq) {
+
+        // Pass the userId to the service for authorization check
+        Business business = businessService.updateBusiness(id, businessReq);
         return ResponseEntity.ok(business);
     }
+
 
     /**
      * Deletes a business by its ID.

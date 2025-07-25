@@ -6,6 +6,7 @@ import com.menubyte.entity.Menu;
 import com.menubyte.service.ItemService;
 import com.menubyte.service.CategoryService;
 import com.menubyte.service.MenuService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,20 +33,33 @@ public class ItemController {
     /**
      * Creates a new item for a specific business's menu.
      */
-    @PostMapping("/{businessId}")
+    @PostMapping(value = "/{businessId}", consumes = MediaType.APPLICATION_JSON_VALUE) // <--- Added consumes attribute
     public ResponseEntity<?> createItem(@PathVariable Long businessId, @RequestBody Item item) {
         if (item == null || item.getItemName() == null) {
             return ResponseEntity.badRequest().body("Invalid item data provided.");
         }
 
-        // ✅ Unwrap Optional properly
+        // Ensure category and menu are not null from the incoming payload
+        if (item.getCategory() == null || item.getCategory().getId() == null) {
+            return ResponseEntity.badRequest().body("Category information is missing or invalid.");
+        }
+        if (item.getMenu() == null || item.getMenu().getId() == null) {
+            return ResponseEntity.badRequest().body("Menu information is missing or invalid.");
+        }
+
+
+        // Fetch existing Category and Menu entities from the database
+        // This is crucial because @RequestBody only binds the ID, not the full entity graph.
         Category category = categoryService.findById(item.getCategory().getId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new RuntimeException("Category not found with ID: " + item.getCategory().getId()));
 
+        // Verify that the menu ID from the payload matches the businessId from path variable
+        // and that the menu exists.
         Menu menu = menuService.findByBusinessId(businessId)
-                .orElseThrow(() -> new RuntimeException("Menu not found for business ID: " + businessId));
+                .filter(m -> m.getId().equals(item.getMenu().getId())) // Ensure menu ID matches payload
+                .orElseThrow(() -> new RuntimeException("Menu not found for business ID: " + businessId + " or menu ID from payload: " + item.getMenu().getId()));
 
-        // ✅ Set category and menu before saving
+        // Set the managed Category and Menu entities to the Item before saving
         item.setCategory(category);
         item.setMenu(menu);
 

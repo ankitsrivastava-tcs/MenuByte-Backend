@@ -1,19 +1,11 @@
-/**
- * Service for managing Master Item entities.
- * Handles item creation, retrieval, updates, and deletion.
- *
- * @author Ankit Srivastava
- */
 package com.menubyte.service;
 
 import com.menubyte.entity.MasterItem;
 import com.menubyte.repository.MasterItemRepository;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
+import java.util.Optional;
 
-@Slf4j
 @Service
 public class MasterItemService {
 
@@ -23,63 +15,54 @@ public class MasterItemService {
         this.masterItemRepository = masterItemRepository;
     }
 
-    /**
-     * Create a Master Item.
-     * @param masterItem MasterItem object.
-     * @return Created MasterItem object.
-     */
+    public List<MasterItem> getAllMasterItems() {
+        return masterItemRepository.findAll();
+    }
+
+    public Optional<MasterItem> getMasterItemById(Long id) {
+        return masterItemRepository.findById(id);
+    }
+
     public MasterItem createMasterItem(MasterItem masterItem) {
-        log.info("Creating master item: {}", masterItem);
+        // You might want to add business logic here, e.g., check for duplicate item names
         return masterItemRepository.save(masterItem);
     }
 
-    /**
-     * Get a Master Item by ID.
-     * @param id MasterItem ID.
-     * @return MasterItem object.
-     */
-    public MasterItem getMasterItemById(Long id) {
-        log.info("Fetching master item with ID: {}", id);
+    public MasterItem updateMasterItem(Long id, MasterItem updatedMasterItem) {
         return masterItemRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Master Item not found with ID: {}", id);
-                    return new RuntimeException("Master Item not found");
-                });
+                .map(existingItem -> {
+                    existingItem.setItemName(updatedMasterItem.getItemName());
+                    existingItem.setItemDescription(updatedMasterItem.getItemDescription());
+                    existingItem.setItemPrice(updatedMasterItem.getItemPrice());
+                    existingItem.setItemImage(updatedMasterItem.getItemImage());
+                    existingItem.setMasterCategory(updatedMasterItem.getMasterCategory()); // Update category if needed
+                    return masterItemRepository.save(existingItem);
+                })
+                .orElseThrow(() -> new RuntimeException("MasterItem not found with id " + id));
     }
 
-    /**
-     * Update a Master Item.
-     * @param id MasterItem ID.
-     * @param updatedItem Updated item details.
-     * @return Updated MasterItem object.
-     */
-    public MasterItem updateMasterItem(Long id, MasterItem updatedItem) {
-        log.info("Updating master item with ID: {}", id);
-        MasterItem existingItem = getMasterItemById(id);
-        existingItem.setItemDescription(updatedItem.getItemDescription());
-        existingItem.setItemPrice(updatedItem.getItemPrice());
-        existingItem.setItemImage(updatedItem.getItemImage());
-        existingItem.setCategory(updatedItem.getCategory());
-        MasterItem updated = masterItemRepository.save(existingItem);
-        log.info("Master item updated successfully: {}", updated);
-        return updated;
-    }
-
-    /**
-     * Delete a Master Item.
-     * @param id MasterItem ID.
-     */
     public void deleteMasterItem(Long id) {
-        log.info("Deleting master item with ID: {}", id);
         masterItemRepository.deleteById(id);
     }
 
     /**
-     * Get all Master Items.
-     * @return List of MasterItem objects.
+     * Finds master items by the ID of their associated master category.
+     *
+     * @param masterCategoryId The ID of the master category.
+     * @return A list of master items belonging to the specified master category.
      */
-    public List<MasterItem> getAllMasterItems() {
-        log.info("Fetching all master items");
-        return masterItemRepository.findAll();
+    public List<MasterItem> getMasterItemsByMasterCategoryId(Long masterCategoryId) {
+        // Corrected method call: using findByMasterCategory_Id as defined in the repository
+        return masterItemRepository.findByMasterCategory_Id(masterCategoryId);
+    }
+
+    /**
+     * Finds a master item by its name, ignoring case.
+     *
+     * @param itemName The name of the item to search for.
+     * @return An Optional containing the found MasterItem, or empty if not found.
+     */
+    public Optional<MasterItem> getMasterItemByNameIgnoreCase(String itemName) {
+        return masterItemRepository.findByItemNameIgnoreCase(itemName);
     }
 }

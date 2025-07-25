@@ -8,7 +8,11 @@ package com.menubyte.service;
 
 import com.menubyte.dto.BusinessDTO;
 import com.menubyte.entity.Business;
+import com.menubyte.entity.Menu;
+import com.menubyte.entity.User;
 import com.menubyte.repository.BusinessRepository;
+import com.menubyte.repository.MenuRepository;
+import com.menubyte.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -20,22 +24,16 @@ import java.util.stream.Collectors;
 public class BusinessService {
 
     private final BusinessRepository businessRepository;
+    private final UserRepository  userRepository ;
+    private final MenuRepository menuRepository ;
 
-    public BusinessService(BusinessRepository businessRepository) {
+
+    public BusinessService(BusinessRepository businessRepository, UserRepository userRepository, MenuRepository menuRepository) {
         this.businessRepository = businessRepository;
+        this.userRepository = userRepository;
+        this.menuRepository = menuRepository;
     }
 
-    /**
-     * Create a new Business.
-     * @param business Business details.
-     * @return Created Business object.
-     */
-    public Business createBusiness(Business business) {
-        log.info("Creating new business: {}", business);
-        Business createdBusiness = businessRepository.save(business);
-        log.info("Business created successfully: {}", createdBusiness);
-        return createdBusiness;
-    }
 
     /**
      * Get a Business by ID.
@@ -92,5 +90,20 @@ public class BusinessService {
         Business business = getBusinessById(id);
         businessRepository.delete(business);
         log.info("Business deleted successfully with ID: {}", id);
+    }
+    // In BusinessService.java
+    public Business createBusiness(long userId,Business business) {
+        // Assuming business.getUser() contains at least the ID from the frontend
+        // In a real app, you'd get the user from the authenticated context
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        business.setUser(user);
+        // You might also want to create a default menu for the business here
+        Business savedBusiness = businessRepository.save(business);
+        Menu newMenu = new Menu();
+        newMenu.setBusiness(savedBusiness);
+        menuRepository.save(newMenu); // Save the new menu
+        savedBusiness.setMenu(newMenu); // Link the menu back to the business entity
+        return savedBusiness;
     }
 }

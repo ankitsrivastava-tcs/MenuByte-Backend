@@ -1,5 +1,6 @@
 package com.menubyte.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,18 +22,24 @@ public class Item {
     private String itemImage;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.VegNonVeg vegOrNonVeg;
+    private com.menubyte.entity.VegNonVeg vegOrNonVeg; // Assuming enum is in enums package
 
     private boolean itemAvailability;
     private boolean bestseller;
 
-    @ManyToOne(fetch = FetchType.EAGER) // <--- Changed to EAGER fetch type
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
-    @JsonIgnore // Prevents serialization of the category to avoid circular reference
+    @JsonBackReference("item-category-ref") // Unique name for this back-reference
     private Category category;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "menu_id", nullable = false)
-    @JsonIgnore
+    @JsonBackReference("item-menu-ref") // Unique name for this back-reference
     private Menu menu;
+
+    // NEW: Optional link to MasterItem to avoid duplication and allow customization
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "master_item_id") // This column is nullable
+    @JsonIgnore // Ignore to prevent recursion if MasterItem has a back-reference
+    private MasterItem masterItem;
 }
