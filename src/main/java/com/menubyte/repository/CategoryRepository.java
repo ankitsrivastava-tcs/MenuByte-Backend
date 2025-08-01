@@ -1,6 +1,7 @@
 package com.menubyte.repository;
 
 import com.menubyte.entity.Category;
+import com.menubyte.entity.Menu;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -30,4 +31,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      * Finds all Categories associated with a specific MasterCategory ID.
      */
     List<Category> findByMasterCategoryId(Long masterCategoryId);
+    Optional<Category> findByCategoryDescriptionAndMenu(String categoryDescription, Menu menu);
+
 }

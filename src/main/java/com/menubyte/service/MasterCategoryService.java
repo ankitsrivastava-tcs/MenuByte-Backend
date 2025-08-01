@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -78,5 +79,12 @@ public class MasterCategoryService {
     public List<MasterCategory> getAllMasterCategories() {
         log.info("Fetching all master categories");
         return masterCategoryRepository.findAll();
+    }
+
+    public MasterCategory save(MasterCategory masterCategory) {
+        return masterCategoryRepository.save(masterCategory);
+    }
+    public Optional<MasterCategory> findByCategoryDescription(String categoryDescription) {
+        return masterCategoryRepository.findByCategoryDescription(categoryDescription);
     }
 }

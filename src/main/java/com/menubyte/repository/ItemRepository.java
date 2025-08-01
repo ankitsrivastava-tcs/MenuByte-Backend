@@ -48,9 +48,19 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     /**
      * Finds all Items by their VegNonVeg type for a given Menu ID.
      */
+    // You have a comment here, implying a method for VegNonVeg type for a given Menu ID might be missing.
+    // If you need it, add:
+    // List<Item> findByMenuIdAndVegOrNonVeg(Long menuId, VegNonVeg vegNonVeg);
+
 
     /**
      * Finds items by name containing a given string (case-insensitive) within a specific menu.
      */
     List<Item> findByMenuIdAndItemNameContainingIgnoreCase(Long menuId, String itemName);
+
+    /**
+     * Finds all Items associated with a Menu that belongs to a specific Business ID.
+     * This method traverses the relationship: Item -> Menu -> Business.
+     */
+    List<Item> findByMenuBusinessId(Long businessId);
 }
