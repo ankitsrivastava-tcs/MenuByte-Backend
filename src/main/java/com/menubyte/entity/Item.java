@@ -1,21 +1,20 @@
 package com.menubyte.entity;
-
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate; // Import
-import org.springframework.data.annotation.LastModifiedDate; // Import
-import org.springframework.data.jpa.domain.support.AuditingEntityListener; // Import
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime; // Import if not already there
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@EntityListeners(AuditingEntityListener.class) // <--- Add this
+@EntityListeners(AuditingEntityListener.class)
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,12 +22,12 @@ public class Item {
 
     private String itemName;
     private String itemDescription;
-    private double itemPrice;
+    private double itemPrice; // Confirmed: itemPrice
     private double itemDiscount;
     private String itemImage;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.VegNonVeg vegOrNonVeg;
+    private com.menubyte.entity.VegNonVeg vegOrNonVeg; // Confirmed: VegNonVeg enum
 
     private boolean itemAvailability;
     private boolean bestseller;
@@ -48,14 +47,11 @@ public class Item {
     @JsonIgnore
     private MasterItem masterItem;
 
-    // --- NEW AUDITING FIELDS ---
-    // In your Item.java entity
     @CreatedDate
-    @Column(name = "created_date", nullable = true, updatable = false) // Changed to true
+    @Column(name = "created_date", nullable = true, updatable = false)
     private LocalDateTime createdDate;
 
     @LastModifiedDate
-    @Column(name = "updated_date", nullable = true) // Changed to true
+    @Column(name = "updated_date", nullable = true)
     private LocalDateTime updatedDate;
-    // --- END NEW AUDITING FIELDS ---
 }

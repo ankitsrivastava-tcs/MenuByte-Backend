@@ -1,6 +1,7 @@
 package com.menubyte.controller;
 
 import com.menubyte.dto.ItemCreationRequest;
+import com.menubyte.dto.ItemUpdateRequest;
 import com.menubyte.entity.Category;
 import com.menubyte.entity.Item;
 import com.menubyte.entity.MasterCategory; // Assuming this entity exists
@@ -196,19 +197,34 @@ public class ItemController {
 
     /**
      * Updates an existing item.
-     * Note: This endpoint assumes 'updatedItem' contains all necessary fields for an update.
-     * If category/menu/masterItem relationships are to be changed via this update,
-     * the DTO and service logic would need to be expanded.
+     * The request body now uses ItemUpdateRequest DTO for clarity and proper relationship handling.
      *
      * @param itemId The ID of the item to update.
-     * @param updatedItem The Item object with updated details (from request body).
+     * @param request The DTO containing updated item details and the category ID.
      * @return ResponseEntity with the updated Item object and HTTP status 200 (OK).
-     * @throws ResponseStatusException if the item is not found or other validation issues (handled by ItemService).
+     * @throws ResponseStatusException if the item is not found or other validation issues.
      */
     @PutMapping(value = "/{itemId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Transactional
-    public ResponseEntity<Item> updateItem(@PathVariable Long itemId, @RequestBody Item updatedItem) {
-        Item updated = itemService.updateItem(itemId, updatedItem);
+    public ResponseEntity<Item> updateItem(@PathVariable Long itemId, @RequestBody ItemUpdateRequest request) { // <-- Changed
+        // Basic validation for the DTO
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body cannot be null.");
+        }
+        if (request.getItemName() == null || request.getItemName().trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item name cannot be empty.");
+        }
+        if (request.getPrice() == null || request.getPrice() <= 0) { // Using getPrice
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item price must be a positive number.");
+        }
+        if (request.getItemDiscount() == null || request.getItemDiscount() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item discount must be a non-negative number.");
+        }
+        if (request.getCategoryId() == null) { // Validate categoryId is provided
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category ID must be provided for item update.");
+        }
+
+        Item updated = itemService.updateItem(itemId, request); // <-- Changed
         return ResponseEntity.ok(updated);
     }
 

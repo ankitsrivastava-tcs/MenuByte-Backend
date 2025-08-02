@@ -1,18 +1,19 @@
 package com.menubyte.service;
 
+import com.menubyte.dto.ItemUpdateRequest; // <--- NEW: Import the DTO
 import com.menubyte.entity.Business;
 import com.menubyte.entity.Category;
 import com.menubyte.entity.Item;
-import com.menubyte.entity.Menu;
-import com.menubyte.entity.MasterItem; // Make sure this is imported
+import com.menubyte.entity.Menu; // Unused, but keep if needed elsewhere
+import com.menubyte.entity.MasterItem;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.ItemRepository;
-import com.menubyte.repository.MasterItemRepository; // Make sure this is imported and exists
+import com.menubyte.repository.MasterItemRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.transaction.annotation.Transactional; // Import for transactional methods
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,12 +25,15 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final BusinessRepository businessRepository;
-    private final MasterItemRepository masterItemRepository; // Correctly injected now
+    private final MasterItemRepository masterItemRepository;
+    private final CategoryService categoryService; // <--- NEW: Inject CategoryService
 
-    public ItemService(ItemRepository itemRepository, BusinessRepository businessRepository, MasterItemRepository masterItemRepository) {
+    public ItemService(ItemRepository itemRepository, BusinessRepository businessRepository,
+                       MasterItemRepository masterItemRepository, CategoryService categoryService) { // <--- NEW: Add to constructor
         this.itemRepository = itemRepository;
         this.businessRepository = businessRepository;
         this.masterItemRepository = masterItemRepository;
+        this.categoryService = categoryService; // <--- NEW: Initialize
     }
 
     /**
@@ -63,16 +67,12 @@ public class ItemService {
         }
 
         // Verify that the menu linked to the item actually belongs to the provided businessId
-        // This check ensures consistency between the path variable businessId and the item's menu's business.
-        // It relies on item.getMenu() already having its business populated by the controller or lazy loading.
         if (item.getMenu().getBusiness() == null || !item.getMenu().getBusiness().getId().equals(businessId)) {
             log.error("Item's menu (ID: {}) does not belong to the specified business ID: {}", item.getMenu().getId(), businessId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item's menu does not belong to this business.");
         }
 
         // MasterItem handling: If masterItem is linked (by ID) in the incoming Item object, fetch it
-        // The controller should ideally fetch the MasterItem entity and set it on the 'item' object
-        // before passing it here. If it only provides an ID, this logic fetches the full entity.
         if (item.getMasterItem() != null && item.getMasterItem().getId() != null) {
             MasterItem masterItem = masterItemRepository.findById(item.getMasterItem().getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + item.getMasterItem().getId()));
@@ -97,7 +97,6 @@ public class ItemService {
      */
     public List<Item> getItemsForBusiness(Long businessId) {
         log.info("Fetching items for business ID: {}", businessId);
-        // Using the new findByMenuBusinessId method from ItemRepository
         List<Item> items = itemRepository.findByMenuBusinessId(businessId);
         log.info("Total items found for business {}: {}", businessId, items.size());
         return items;
@@ -118,61 +117,53 @@ public class ItemService {
     }
 
     /**
-     * Updates an existing item.
+     * Updates an existing item using an ItemUpdateRequest DTO.
      * @param itemId Item ID.
-     * @param updatedItem Updated item details.
+     * @param request DTO containing updated item details and category ID.
      * @return Updated Item object.
      */
     @Transactional
-    public Item updateItem(Long itemId, Item updatedItem) {
+    public Item updateItem(Long itemId, ItemUpdateRequest request) {
         log.info("Updating item with ID: {}", itemId);
-        Item existingItem = getItemById(itemId); // Uses the service's own getItemById for existence check and error handling
+        Item existingItem = getItemById(itemId); // Fetch existing item
 
-        // Update basic fields
-        existingItem.setItemName(updatedItem.getItemName());
-        existingItem.setItemDescription(updatedItem.getItemDescription());
-        existingItem.setItemPrice(updatedItem.getItemPrice());
-        existingItem.setItemDiscount(updatedItem.getItemDiscount());
-        existingItem.setItemImage(updatedItem.getItemImage());
-        existingItem.setVegOrNonVeg(updatedItem.getVegOrNonVeg());
-        existingItem.setItemAvailability(updatedItem.isItemAvailability());
-        existingItem.setBestseller(updatedItem.isBestseller());
+        // Fetch the Category entity using the ID from the DTO
+        Category newCategory = categoryService.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Category not found with ID: " + request.getCategoryId()));
 
-        // --- Category Update Logic (if allowed) ---
-        // If the updatedItem's category ID is different, fetch and set the new category.
-        // This assumes updatedItem.getCategory() will contain at least the ID if changing.
-        if (updatedItem.getCategory() != null && updatedItem.getCategory().getId() != null) {
-            if (existingItem.getCategory() == null || !existingItem.getCategory().getId().equals(updatedItem.getCategory().getId())) {
-                // Fetch the new category from the database
-                Category newCategory = existingItem.getMenu().getCategories().stream() // Get categories from the item's current menu
-                        .filter(c -> c.getId().equals(updatedItem.getCategory().getId()))
-                        .findFirst()
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                "New category not found with ID: " + updatedItem.getCategory().getId() + " for this item's menu."));
-                existingItem.setCategory(newCategory);
-            }
-        } else if (updatedItem.getCategory() == null) {
-            // If the incoming updatedItem explicitly sets category to null, you might want to handle this
-            // e.g., throw an error if a category is mandatory, or set existingItem.setCategory(null) if allowed.
-            // Based on your Item entity, category_id is nullable = false, so this shouldn't be allowed.
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category cannot be null for an item.");
+        // --- Important: Ensure the fetched category belongs to the item's menu ---
+        if (existingItem.getMenu() == null || newCategory.getMenu() == null || !newCategory.getMenu().getId().equals(existingItem.getMenu().getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Category (ID: " + newCategory.getId() + ") does not belong to the menu of item (ID: " + itemId + ").");
         }
 
+        // Update basic fields from the DTO
+        existingItem.setItemName(request.getItemName());
+        existingItem.setItemDescription(request.getItemDescription());
+        existingItem.setItemPrice(request.getPrice());
+        existingItem.setItemDiscount(request.getItemDiscount());
+        existingItem.setItemImage(request.getItemImage());
+        existingItem.setVegOrNonVeg(request.getVegOrNonVeg());
 
-        // --- MasterItem Update Logic (if allowed) ---
-        // This assumes updatedItem.getMasterItem() might contain an ID if changing
-        // You need to decide if MasterItem can be changed on an existing item.
-        // If updatedItem.getMasterItem() is null, it means frontend explicitly wants to unlink master item.
-        if (updatedItem.getMasterItem() != null && updatedItem.getMasterItem().getId() != null) {
-            if (existingItem.getMasterItem() == null || !existingItem.getMasterItem().getId().equals(updatedItem.getMasterItem().getId())) {
-                MasterItem newMasterItem = masterItemRepository.findById(updatedItem.getMasterItem().getId())
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + updatedItem.getMasterItem().getId()));
-                existingItem.setMasterItem(newMasterItem);
-            }
-        } else if (updatedItem.getMasterItem() == null) {
-            existingItem.setMasterItem(null); // Explicitly unlink if frontend sends null
+        // --- FIX: Handle null Booleans from DTO for primitive boolean fields ---
+        existingItem.setItemAvailability(request.getItemAvailability() != null ? request.getItemAvailability() : false); // Provide a default if null
+        existingItem.setBestseller(request.getBestseller() != null ? request.getBestseller() : false); // Provide a default if null
+
+        // Set the resolved Category entity
+        existingItem.setCategory(newCategory);
+
+        // --- MasterItem Update Logic (Optional - if you want to allow changing master item) ---
+        // Uncomment and adapt if your frontend sends masterItemId in ItemUpdateRequest
+        /*
+        if (request.getMasterItemId() != null) {
+            MasterItem newMasterItem = masterItemRepository.findById(request.getMasterItemId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + request.getMasterItemId()));
+            existingItem.setMasterItem(newMasterItem);
+        } else {
+            existingItem.setMasterItem(null); // Explicitly unlink if DTO sends null or doesn't include it
         }
-
+        */
 
         existingItem.setUpdatedDate(LocalDateTime.now()); // Update timestamp
 
@@ -180,6 +171,7 @@ public class ItemService {
         log.info("Item updated successfully with ID: {}", updated.getId());
         return updated;
     }
+
 
     /**
      * Deletes an item by its ID.
