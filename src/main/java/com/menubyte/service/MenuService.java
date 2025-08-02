@@ -1,17 +1,17 @@
 package com.menubyte.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper; // Not used in this method, can be removed if not used elsewhere
 import com.menubyte.dto.CategoryDTO;
 import com.menubyte.dto.ItemDTO;
 import com.menubyte.dto.MenuDTO;
 import com.menubyte.entity.*;
-import com.menubyte.mapper.ItemMapper; // Ensure ItemMapper is correctly imported
+import com.menubyte.mapper.ItemMapper;
 import com.menubyte.repository.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils; // Not used in updateMenuItems anymore, can be removed if not used elsewhere
+import org.springframework.http.HttpStatus; // Import HttpStatus
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.hibernate.Hibernate; // Import Hibernate utility for initialization
+import org.springframework.web.server.ResponseStatusException; // Import ResponseStatusException
+import org.hibernate.Hibernate;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,18 +22,19 @@ public class MenuService {
 
     private final MenuRepository menuRepository;
     private final BusinessRepository businessRepository;
-    private final CategoryRepository categoryRepository; // Not used in updateMenuItems, can be removed if not used elsewhere
-    private final MasterCategoryRepository masterCategoryRepository; // Not used in updateMenuItems, can be removed if not used elsewhere
+    // private final CategoryRepository categoryRepository; // Removed if not directly used here
+    // private final MasterCategoryRepository masterCategoryRepository; // Removed if not used by public methods
     private final ItemRepository itemRepository;
 
     public MenuService(MenuRepository menuRepository,
                        BusinessRepository businessRepository,
-                       CategoryRepository categoryRepository,
-                       MasterCategoryRepository masterCategoryRepository, ItemRepository itemRepository) {
+                       CategoryRepository categoryRepository, // Keep if still injected for other methods
+                       MasterCategoryRepository masterCategoryRepository, // Keep if still injected for other methods
+                       ItemRepository itemRepository) {
         this.menuRepository = menuRepository;
         this.businessRepository = businessRepository;
-        this.categoryRepository = categoryRepository;
-        this.masterCategoryRepository = masterCategoryRepository;
+        // this.categoryRepository = categoryRepository; // Keep if still injected for other methods
+        // this.masterCategoryRepository = masterCategoryRepository; // Keep if still injected for other methods
         this.itemRepository = itemRepository;
     }
 
@@ -45,23 +46,27 @@ public class MenuService {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> {
                     log.error("Business not found with ID: {}", businessId);
-                    return new RuntimeException("Business not found");
+                    // Use ResponseStatusException for better API error handling
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found with ID: " + businessId);
                 });
 
         if (!business.getUser().getId().equals(user.getId())) {
             log.error("Unauthorized access attempt by user ID: {} for business ID: {}", user.getId(), businessId);
-            throw new RuntimeException("Unauthorized! You don't own this business.");
+            // Use ResponseStatusException for better API error handling
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unauthorized! You don't own this business.");
         }
 
         return menuRepository.findByBusinessId(businessId)
                 .orElseThrow(() -> {
                     log.error("No menu found for business ID: {}", businessId);
-                    return new RuntimeException("No menu found for this business.");
+                    // Use ResponseStatusException for better API error handling
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "No menu found for this business.");
                 });
     }
 
     /**
      * Find Menu by Business ID.
+     * This method is used by ItemService to check for existing menus or create new ones.
      */
     public Optional<Menu> findByBusinessId(Long businessId) {
         log.info("Finding menu for business ID: {}", businessId);
@@ -69,7 +74,22 @@ public class MenuService {
     }
 
     /**
+     * Saves a new Menu entity.
+     * This method is called from ItemService when a default menu needs to be created.
+     * @param menu The Menu entity to save.
+     * @return The saved Menu entity.
+     */
+    @Transactional // Ensure the save operation is transactional
+    public Menu save(Menu menu) {
+        log.info("Saving new menu with name: {}", menu.getMenuName());
+        return menuRepository.save(menu);
+    }
+
+
+    /**
      * Updates the items of a menu for a given business and user.
+     * This method is designed to update *existing* items within *existing* categories.
+     * It does not support creating new categories or new items.
      */
     @Transactional
     public Menu updateMenuItems(Long businessId, User user, MenuDTO updatedMenuDTO) {
@@ -84,14 +104,20 @@ public class MenuService {
         // 2. Iterate through the categories and items provided in the DTO
         for (CategoryDTO categoryDto : updatedMenuDTO.getCategories()) {
             if (categoryDto.getId() == null) {
-                log.warn("Skipping category update: CategoryDTO for '{}' has no ID. Cannot find existing category.", categoryDto.getCategoryName());
-                continue;
+                log.warn("Skipping category update: CategoryDTO for '{}' has no ID. This method only updates existing categories.", categoryDto.getCategoryName());
+                continue; // Skip categories without an ID (i.e., new categories)
             }
+
+            // We might need to find the existing Category entity if the DTO only sends ID
+            // For now, assuming categoryDto.getId() is sufficient for item lookup.
+            // If you need to update Category properties as well, fetch the Category entity:
+            // Optional<Category> existingCategoryOptional = categoryRepository.findById(categoryDto.getId());
+            // if (existingCategoryOptional.isPresent()) { Category existingCategory = existingCategoryOptional.get(); ... }
 
             for (ItemDTO itemDto : categoryDto.getItems()) {
                 if (itemDto.getId() == null) {
-                    log.warn("Skipping item update: ItemDTO for '{}' has no ID. Cannot find existing item.", itemDto.getItemName());
-                    continue;
+                    log.warn("Skipping item update: ItemDTO for '{}' has no ID. This method only updates existing items.", itemDto.getItemName());
+                    continue; // Skip items without an ID (i.e., new items)
                 }
 
                 // Find the existing Item entity in the database using category ID, menu ID, and item ID
@@ -106,6 +132,7 @@ public class MenuService {
 
                     // Explicitly initialize the 'category' association of the found item
                     Hibernate.initialize(existingItem.getCategory());
+                    Hibernate.initialize(existingItem.getMenu()); // Also initialize menu if you access its properties after this method
 
                     // Copy properties from the DTO to the existing entity using the mapper
                     ItemMapper.updateEntityFromDto(itemDto, existingItem);
@@ -125,6 +152,11 @@ public class MenuService {
         Hibernate.initialize(existingMenu.getItems());
         for (Item item : existingMenu.getItems()) {
             Hibernate.initialize(item.getCategory());
+            Hibernate.initialize(item.getMenu());
+            // Also initialize masterItem if it's accessed (and can be lazy loaded)
+            if (item.getMasterItem() != null) {
+                Hibernate.initialize(item.getMasterItem());
+            }
         }
 
         return existingMenu; // Return the updated menu entity
@@ -132,13 +164,20 @@ public class MenuService {
 
     /**
      * Finds or creates a MasterCategory by description.
+     * This method is private and not currently called by any public method in MenuService.
+     * It might be intended for future use or belong in CategoryService.
      */
     private MasterCategory findOrCreateMasterCategory(String categoryDescription) {
+        // This method will only work if masterCategoryRepository is still injected.
+        // Consider moving this logic to CategoryService if it's related to Category management.
+        return null; // Placeholder: replace with actual logic if keeping this method and its dependency
+        /*
         return masterCategoryRepository.findByCategoryDescription(categoryDescription)
                 .orElseGet(() -> {
                     MasterCategory mc = new MasterCategory();
                     mc.setCategoryDescription(categoryDescription);
                     return masterCategoryRepository.save(mc);
                 });
+        */
     }
 }

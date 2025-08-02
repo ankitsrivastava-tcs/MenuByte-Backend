@@ -1,10 +1,10 @@
 package com.menubyte.service;
 
-import com.menubyte.dto.ItemUpdateRequest; // <--- NEW: Import the DTO
+import com.menubyte.dto.ItemUpdateRequest;
 import com.menubyte.entity.Business;
 import com.menubyte.entity.Category;
 import com.menubyte.entity.Item;
-import com.menubyte.entity.Menu; // Unused, but keep if needed elsewhere
+import com.menubyte.entity.Menu;
 import com.menubyte.entity.MasterItem;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.ItemRepository;
@@ -26,69 +26,108 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private final BusinessRepository businessRepository;
     private final MasterItemRepository masterItemRepository;
-    private final CategoryService categoryService; // <--- NEW: Inject CategoryService
+    private final CategoryService categoryService;
+    private final MenuService menuService;
 
     public ItemService(ItemRepository itemRepository, BusinessRepository businessRepository,
-                       MasterItemRepository masterItemRepository, CategoryService categoryService) { // <--- NEW: Add to constructor
+                       MasterItemRepository masterItemRepository, CategoryService categoryService,
+                       MenuService menuService) {
         this.itemRepository = itemRepository;
         this.businessRepository = businessRepository;
         this.masterItemRepository = masterItemRepository;
-        this.categoryService = categoryService; // <--- NEW: Initialize
+        this.categoryService = categoryService;
+        this.menuService = menuService;
     }
 
-    /**
-     * Creates an item for a business's menu.
-     * This method expects the Item object to already have its associated
-     * Category and Menu entities set by the controller.
-     *
-     * @param businessId Business ID (for verification).
-     * @param item Item details with resolved Category, Menu, and potentially MasterItem.
-     * @return Created Item object.
-     */
-    @Transactional // Ensure atomicity for database operations
+    @Transactional
     public Item createItemForBusiness(Long businessId, Item item) {
         log.info("Creating item for business ID: {}. Item name: {}", businessId, item.getItemName());
 
-        // Sanity check: Verify that the business exists.
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> {
                     log.error("Business not found with ID: {}", businessId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found with ID: " + businessId);
                 });
 
-        // Ensure Menu and Category are properly set by the controller
-        if (item.getMenu() == null || item.getMenu().getId() == null) {
-            log.error("Item's menu is null or missing ID after controller processing.");
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Menu information not properly set for item.");
-        }
-        if (item.getCategory() == null || item.getCategory().getId() == null) {
-            log.error("Item's category is null or missing ID after controller processing.");
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Category information not properly set for item.");
+        Menu menu = menuService.findByBusinessId(businessId)
+                .orElseGet(() -> {
+                    log.info("No existing menu found for business ID: {}. Creating a default menu.", businessId);
+                    Menu newMenu = new Menu();
+                    newMenu.setMenuName("Default Menu for " + business.getBusinessName());
+                    newMenu.setBusiness(business);
+                    if (newMenu.getCreatedDate() == null) {
+                        newMenu.setCreatedDate(LocalDateTime.now());
+                    }
+                    newMenu.setUpdatedDate(LocalDateTime.now());
+                    return menuService.save(newMenu);
+                });
+
+        Category category = item.getCategory();
+
+        if (category == null) {
+            log.error("Item's category is null before processing.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category information is missing for the item.");
         }
 
-        // Verify that the menu linked to the item actually belongs to the provided businessId
-        if (item.getMenu().getBusiness() == null || !item.getMenu().getBusiness().getId().equals(businessId)) {
-            log.error("Item's menu (ID: {}) does not belong to the specified business ID: {}", item.getMenu().getId(), businessId);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item's menu does not belong to this business.");
-        }
+        if (category.getId() == null) {
+            // This means it's a NEW Category (transient) from the controller,
+            // which has its description and MasterCategory set.
+            log.info("Incoming category has no ID, assuming new category. Delegating creation to CategoryService.");
 
-        // MasterItem handling: If masterItem is linked (by ID) in the incoming Item object, fetch it
+            // *** CRITICAL CHANGE HERE: Use the dedicated createCategory method from CategoryService ***
+            // This method handles the uniqueness check for categoryDescription within the menu,
+            // and saving the category. It will throw CONFLICT if a duplicate exists.
+            try {
+                category = categoryService.createCategory(category.getCategoryDescription(), menu);
+                log.info("New/Existing Category resolved by CategoryService. Category ID: {}", category.getId());
+            } catch (ResponseStatusException e) {
+                // If CategoryService's createCategory throws CONFLICT, re-throw it.
+                // Or handle other exceptions like BAD_REQUEST if relevant.
+                log.error("Failed to create/resolve category via CategoryService: {}", e.getReason());
+                throw e; // Re-throw the exception from CategoryService
+            }
+        } else {
+            // This is an EXISTING category by ID. Fetch it to ensure it's managed and valid.
+            Optional<Category> existingCategoryOpt = categoryService.findById(category.getId());
+            if (existingCategoryOpt.isEmpty()) {
+                log.error("Existing category with ID {} not found.", category.getId());
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Existing category not found with ID: " + category.getId());
+            }
+            category = existingCategoryOpt.get(); // Use the managed entity
+
+            // Validate that the existing category belongs to this business's menu
+            if (category.getMenu() == null || !category.getMenu().getId().equals(menu.getId())) {
+                log.error("Existing category ID {} does not belong to menu ID {} for business ID {}",
+                        category.getId(), menu.getId(), businessId);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Existing category with ID " + category.getId() + " does not belong to the menu of business ID " + businessId + ".");
+            }
+            log.info("Using existing category with ID: {}", category.getId());
+        }
+        item.setCategory(category);
+
+
+        item.setMenu(menu);
+
         if (item.getMasterItem() != null && item.getMasterItem().getId() != null) {
             MasterItem masterItem = masterItemRepository.findById(item.getMasterItem().getId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + item.getMasterItem().getId()));
             item.setMasterItem(masterItem);
         } else {
-            item.setMasterItem(null); // Ensure it's null if not provided or unlinked
+            item.setMasterItem(null);
         }
 
-        // Set creation/update timestamps
-        item.setCreatedDate(LocalDateTime.now());
+        if (item.getCreatedDate() == null) {
+            item.setCreatedDate(LocalDateTime.now());
+        }
         item.setUpdatedDate(LocalDateTime.now());
 
         Item savedItem = itemRepository.save(item);
-        log.info("Item created successfully with ID: {}", savedItem.getId());
+        log.info("Item created successfully with ID: {} and linked to menu ID: {}", savedItem.getId(), menu.getId());
         return savedItem;
     }
+
+    // ... (rest of ItemService methods like getItemsForBusiness, getItemById, updateItem, deleteItem) ...
 
     /**
      * Retrieves all items for a business's menu.
@@ -125,7 +164,7 @@ public class ItemService {
     @Transactional
     public Item updateItem(Long itemId, ItemUpdateRequest request) {
         log.info("Updating item with ID: {}", itemId);
-        Item existingItem = getItemById(itemId); // Fetch existing item
+        Item existingItem = getItemById(itemId);
 
         // Fetch the Category entity using the ID from the DTO
         Category newCategory = categoryService.findById(request.getCategoryId())
@@ -146,32 +185,20 @@ public class ItemService {
         existingItem.setItemImage(request.getItemImage());
         existingItem.setVegOrNonVeg(request.getVegOrNonVeg());
 
-        // --- FIX: Handle null Booleans from DTO for primitive boolean fields ---
-        existingItem.setItemAvailability(request.getItemAvailability() != null ? request.getItemAvailability() : false); // Provide a default if null
-        existingItem.setBestseller(request.getBestseller() != null ? request.getBestseller() : false); // Provide a default if null
+        // Handle null Booleans from DTO for primitive boolean fields
+        existingItem.setItemAvailability(request.getItemAvailability() != null ? request.getItemAvailability() : false);
+        existingItem.setBestseller(request.getBestseller() != null ? request.getBestseller() : false);
 
         // Set the resolved Category entity
         existingItem.setCategory(newCategory);
 
-        // --- MasterItem Update Logic (Optional - if you want to allow changing master item) ---
-        // Uncomment and adapt if your frontend sends masterItemId in ItemUpdateRequest
-        /*
-        if (request.getMasterItemId() != null) {
-            MasterItem newMasterItem = masterItemRepository.findById(request.getMasterItemId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + request.getMasterItemId()));
-            existingItem.setMasterItem(newMasterItem);
-        } else {
-            existingItem.setMasterItem(null); // Explicitly unlink if DTO sends null or doesn't include it
-        }
-        */
-
-        existingItem.setUpdatedDate(LocalDateTime.now()); // Update timestamp
+        // Update timestamp
+        existingItem.setUpdatedDate(LocalDateTime.now());
 
         Item updated = itemRepository.save(existingItem);
         log.info("Item updated successfully with ID: {}", updated.getId());
         return updated;
     }
-
 
     /**
      * Deletes an item by its ID.
@@ -180,7 +207,7 @@ public class ItemService {
     @Transactional
     public void deleteItem(Long itemId) {
         log.info("Deleting item with ID: {}", itemId);
-        Item item = getItemById(itemId); // Uses the service's own getItemById for existence check and error handling
+        Item item = getItemById(itemId);
         itemRepository.delete(item);
         log.info("Item with ID: {} deleted successfully.", itemId);
     }
