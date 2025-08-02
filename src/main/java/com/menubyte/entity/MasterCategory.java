@@ -28,4 +28,7 @@ public class MasterCategory {
     @OneToMany(mappedBy = "masterCategory", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference("master-category-item-ref") // Unique name for this managed-reference
     private List<MasterItem> masterItems;
+    @Enumerated(EnumType.STRING)
+    private com.menubyte.enums.BusinessType businessType;
+
 }

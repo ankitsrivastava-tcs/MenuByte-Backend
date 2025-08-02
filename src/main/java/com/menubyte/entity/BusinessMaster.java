@@ -30,4 +30,6 @@ public class BusinessMaster { // Consider renaming to BusinessSubscription or Bu
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
     private Business business; // Tracks the registered business
+
+
 }

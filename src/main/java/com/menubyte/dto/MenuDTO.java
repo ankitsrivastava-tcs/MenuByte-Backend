@@ -2,6 +2,8 @@ package com.menubyte.dto;
 
 import com.menubyte.entity.Item;
 import com.menubyte.entity.Menu;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,7 +17,8 @@ public class MenuDTO {
     private Long id;
     private String businessName;
     private List<CategoryDTO> categories;
-
+    @Enumerated(EnumType.STRING)
+    private com.menubyte.enums.BusinessType businessType;
     public MenuDTO(Menu menu) {
         this.id = menu.getId();
         this.businessName = menu.getBusiness().getBusinessName();
@@ -24,5 +27,6 @@ public class MenuDTO {
                 .entrySet().stream()
                 .map(entry -> new CategoryDTO(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
+        this.businessType=menu.getBusiness().getBusinessType();
     }
 }
