@@ -1,6 +1,6 @@
 package com.menubyte.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+// import com.fasterxml.jackson.annotation.JsonIgnore; // <-- REMOVE THIS IMPORT if not used elsewhere
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,12 +22,12 @@ public class Item {
 
     private String itemName;
     private String itemDescription;
-    private double itemPrice; // Confirmed: itemPrice
+    private double itemPrice;
     private double itemDiscount;
     private String itemImage;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.VegNonVeg vegOrNonVeg; // Confirmed: VegNonVeg enum
+    private com.menubyte.entity.VegNonVeg vegOrNonVeg;
 
     private boolean itemAvailability;
     private boolean bestseller;
@@ -44,7 +44,7 @@ public class Item {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "master_item_id")
-    @JsonIgnore
+    // @JsonIgnore // <-- REMOVE THIS LINE
     private MasterItem masterItem;
 
     @CreatedDate

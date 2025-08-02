@@ -7,11 +7,13 @@
 package com.menubyte.controller;
 
 import com.menubyte.entity.MasterCategory;
+import com.menubyte.enums.BusinessType;
 import com.menubyte.service.MasterCategoryService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * REST Controller for handling Master Category operations.
@@ -86,8 +88,19 @@ public class MasterCategoryController {
      * @return A list of all MasterCategories.
      */
     @GetMapping
-    public ResponseEntity<List<MasterCategory>> getAllMasterCategories() {
+    public ResponseEntity<List<MasterCategory>> getAllMasterCategories(@RequestParam(required = false) BusinessType businessType) {
+        // Fetch ALL master categories first
         List<MasterCategory> categories = masterCategoryService.getAllMasterCategories();
-        return ResponseEntity.ok(categories);
-    }
-}
+
+        // Apply the filter in the application layer based on the request parameter
+        if (businessType != null) {
+            // Filter by the provided businessType
+            List<MasterCategory> filteredCategories = categories.stream()
+                    .filter(k -> k.getBusinessType() != null && k.getBusinessType().equals(businessType))
+                    .collect(Collectors.toUnmodifiableList());
+            return ResponseEntity.ok(filteredCategories);
+        } else {
+            // If no businessType parameter is provided, return all categories
+            return ResponseEntity.ok(categories);
+        }
+}}

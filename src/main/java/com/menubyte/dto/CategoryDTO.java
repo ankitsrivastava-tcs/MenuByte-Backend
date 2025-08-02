@@ -13,14 +13,16 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CategoryDTO {
-    private Long id; // This field already exists
-
+    private Long id;
     private String categoryName;
+    private Long masterCategoryId; // <-- NEW FIELD
+
     private List<ItemDTO> items;
 
     public CategoryDTO(Category category, List<Item> items) {
-        this.id = category.getId(); // <--- Added this line to set the ID
+        this.id = category.getId();
         this.categoryName = category.getCategoryDescription();
+        this.masterCategoryId = category.getMasterCategory() != null ? category.getMasterCategory().getId() : null; // <-- Populate masterCategoryId
         this.items = items.stream()
                 .map(ItemDTO::new)
                 .collect(Collectors.toList());
