@@ -32,5 +32,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      */
     List<Category> findByMasterCategoryId(Long masterCategoryId);
     Optional<Category> findByCategoryDescriptionAndMenu(String categoryDescription, Menu menu);
+    Optional<Category> findByMenuAndCategoryDescription(Menu menu, String categoryDescription);
 
 }

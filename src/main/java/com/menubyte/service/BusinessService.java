@@ -13,9 +13,12 @@ import com.menubyte.entity.User;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.MenuRepository;
 import com.menubyte.repository.UserRepository;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -101,6 +104,7 @@ public class BusinessService {
         // You might also want to create a default menu for the business here
         Business savedBusiness = businessRepository.save(business);
         Menu newMenu = new Menu();
+        newMenu.setMenuName("Default");
         newMenu.setBusiness(savedBusiness);
         menuRepository.save(newMenu); // Save the new menu
         savedBusiness.setMenu(newMenu); // Link the menu back to the business entity

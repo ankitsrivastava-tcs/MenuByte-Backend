@@ -1,15 +1,17 @@
 package com.menubyte.service;
 
+import com.menubyte.dto.ItemCreationRequest;
 import com.menubyte.dto.ItemUpdateRequest;
-import com.menubyte.entity.Business;
-import com.menubyte.entity.Category;
-import com.menubyte.entity.Item;
-import com.menubyte.entity.Menu;
-import com.menubyte.entity.MasterItem;
+import com.menubyte.entity.*;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.ItemRepository;
+import com.menubyte.repository.MasterCategoryRepository;
 import com.menubyte.repository.MasterItemRepository;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,113 +24,216 @@ import java.util.Optional;
 @Slf4j
 @Service
 public class ItemService {
+@Autowired
+private  ItemRepository itemRepository;
+    @Autowired
 
-    private final ItemRepository itemRepository;
-    private final BusinessRepository businessRepository;
-    private final MasterItemRepository masterItemRepository;
-    private final CategoryService categoryService;
-    private final MenuService menuService;
+    private  BusinessRepository businessRepository;
+    @Autowired
 
-    public ItemService(ItemRepository itemRepository, BusinessRepository businessRepository,
-                       MasterItemRepository masterItemRepository, CategoryService categoryService,
-                       MenuService menuService) {
-        this.itemRepository = itemRepository;
-        this.businessRepository = businessRepository;
-        this.masterItemRepository = masterItemRepository;
-        this.categoryService = categoryService;
-        this.menuService = menuService;
-    }
+    private  MasterItemRepository masterItemRepository;
+    @Autowired
+    @Lazy
+
+    private  CategoryService categoryService;
+    @Autowired
+
+    private  MenuService menuService;
+    @Autowired
+
+    private  MasterCategoryRepository masterCategoryRepository;
+    @Autowired
+    private  MasterCategoryService masterCategoryService;
+    @Autowired
+    private  BusinessService businessService;
+    @Autowired
+    MasterItemService masterItemService;
 
     @Transactional
-    public Item createItemForBusiness(Long businessId, Item item) {
-        log.info("Creating item for business ID: {}. Item name: {}", businessId, item.getItemName());
+    public Item createItemForBusiness(Long businessId, ItemCreationRequest request) {
+        log.info("Starting item creation for business ID: {}", businessId);
 
-        Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> {
-                    log.error("Business not found with ID: {}", businessId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found with ID: " + businessId);
-                });
+        validateItemCreationRequest(request);
 
-        Menu menu = menuService.findByBusinessId(businessId)
+        Business business = businessService.getBusinessById(businessId);
+        Menu menu = findOrCreateMenuForBusiness(businessId, business);
+        Category category = getOrCreateCategory(request, business, menu); // Pass menu to this method
+        MasterItem masterItem = getOrCreateMasterItem(request,category.getMasterCategory().getId(),category);
+
+        Item newItem = mapRequestToNewItem(request, category, masterItem, menu);
+
+        // Final check to ensure the category belongs to the menu
+        if (category.getMenu() != null && !category.getMenu().getId().equals(menu.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Selected category does not belong to the menu of business ID " + businessId + ".");
+        }
+
+        Item savedItem = itemRepository.save(newItem);
+        log.info("Item created successfully with ID: {} for business ID: {}", savedItem.getId(), businessId);
+        return savedItem;
+    }
+
+    // (validateItemCreationRequest method remains the same)
+
+    /**
+     * Determines if a new category needs to be created or an existing one used.
+     * This method now handles all category-related logic, including checking for duplicates.
+     */
+    private Category getOrCreateCategory(ItemCreationRequest request, Business business, Menu menu) {
+        if (request.getIsNewCategory() != null && request.getIsNewCategory()) {
+            if (request.getCategoryDescription() == null || request.getCategoryDescription().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New category requires a description.");
+            }
+
+            // --- CRITICAL CHANGE HERE ---
+            // First, try to find an existing category with the same description for the menu
+            Optional<Category> existingCategoryOpt = categoryService.findByMenuAndCategoryDescription(menu, request.getCategoryDescription());
+            if (existingCategoryOpt.isPresent()) {
+                log.info("Category with description '{}' already exists for menu ID {}. Using existing category.",
+                        request.getCategoryDescription(), menu.getId());
+                return existingCategoryOpt.get();
+            }
+
+            // If it doesn't exist, proceed with creating a new one
+            MasterCategory linkedMasterCategory = masterCategoryService
+                    .findByCategoryDescription(request.getCategoryDescription())
+                    .orElseGet(() -> {
+                        MasterCategory mc = new MasterCategory();
+                        mc.setCategoryDescription(request.getCategoryDescription());
+                        mc.setBusinessType(business.getBusinessType());
+                        return masterCategoryService.save(mc);
+                    });
+
+            Category newCategory = new Category();
+            newCategory.setCategoryDescription(request.getCategoryDescription());
+            newCategory.setMasterCategory(linkedMasterCategory);
+            newCategory.setMenu(menu); // Assign the menu here
+            return categoryService.saveCategory(newCategory); // Save it immediately
+        } else {
+            // Logic for an EXISTING category remains the same
+            if (request.getCategoryId() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Existing category ID is required.");
+            }
+            return categoryService.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found with ID: " + request.getCategoryId()));
+        }
+    }
+
+    // (findOrCreateMenuForBusiness method remains the same)
+    // (getOrCreateMasterItem method remains the same)
+
+    /**
+     * Maps the validated request data to a new Item entity.
+     * This method no longer handles category saving.
+     */
+    private Item mapRequestToNewItem(ItemCreationRequest request, Category category, MasterItem masterItem, Menu menu) {
+        Item newItem = new Item();
+        newItem.setItemName(request.getItemName());
+        newItem.setItemDescription(request.getItemDescription());
+        newItem.setItemPrice(request.getItemPrice());
+        newItem.setItemDiscount(request.getItemDiscount());
+        newItem.setItemImage(request.getItemImage());
+        newItem.setVegOrNonVeg(request.getVegOrNonVeg());
+        newItem.setItemAvailability(request.getItemAvailability() != null ? request.getItemAvailability() : true);
+        newItem.setBestseller(request.getBestseller() != null ? request.getBestseller() : false);
+        newItem.setCategory(category);
+        newItem.setMasterItem(masterItem);
+        newItem.setMenu(menu);
+
+        return newItem;
+    }
+    // (validateItemCreationRequest method remains the same)
+
+    /**
+     * Extracts and consolidates validation logic for the item creation request.
+     */
+    private void validateItemCreationRequest(ItemCreationRequest request) {
+        if (request == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body cannot be null.");
+        }
+        if (request.getItemName() == null || request.getItemName().trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item name cannot be empty.");
+        }
+        if (request.getItemPrice() == null || request.getItemPrice() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item price must be a positive number.");
+        }
+        if (request.getItemDiscount() == null || request.getItemDiscount() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item discount must be a non-negative number.");
+        }
+        // New validation check for conflicting flags
+        if (request.getIsNewItem() != null && request.getIsNewItem() && request.getMasterItemId() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create a new master item and provide a master item ID at the same time.");
+        }
+    }
+
+    /**
+     * Determines if a new category needs to be created or an existing one used.
+     * This method handles all category-related logic.
+     */
+    private Category getOrCreateCategory(ItemCreationRequest request, Business business) {
+        if (request.getIsNewCategory() != null && request.getIsNewCategory()) {
+            if (request.getCategoryDescription() == null || request.getCategoryDescription().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New category requires a description.");
+            }
+
+            MasterCategory linkedMasterCategory = masterCategoryService
+                    .findByCategoryDescription(request.getCategoryDescription())
+                    .orElseGet(() -> {
+                        MasterCategory mc = new MasterCategory();
+                        mc.setCategoryDescription(request.getCategoryDescription());
+                        mc.setBusinessType(business.getBusinessType());
+                        return masterCategoryService.save(mc);
+                    });
+
+            Category newCategory = new Category();
+            newCategory.setCategoryDescription(request.getCategoryDescription());
+            newCategory.setMasterCategory(linkedMasterCategory);
+            return newCategory;
+        } else {
+            if (request.getCategoryId() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Existing category ID is required.");
+            }
+            return categoryService.findById(request.getCategoryId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found with ID: " + request.getCategoryId()));
+        }
+    }
+
+    /**
+     * Finds or creates a menu for the given business.
+     */
+    private Menu findOrCreateMenuForBusiness(Long businessId, Business business) {
+        return menuService.findByBusinessId(businessId)
                 .orElseGet(() -> {
                     log.info("No existing menu found for business ID: {}. Creating a default menu.", businessId);
                     Menu newMenu = new Menu();
                     newMenu.setMenuName("Default Menu for " + business.getBusinessName());
                     newMenu.setBusiness(business);
-                    if (newMenu.getCreatedDate() == null) {
-                        newMenu.setCreatedDate(LocalDateTime.now());
-                    }
+                    newMenu.setCreatedDate(LocalDateTime.now());
                     newMenu.setUpdatedDate(LocalDateTime.now());
                     return menuService.save(newMenu);
                 });
-
-        Category category = item.getCategory();
-
-        if (category == null) {
-            log.error("Item's category is null before processing.");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category information is missing for the item.");
-        }
-
-        if (category.getId() == null) {
-            // This means it's a NEW Category (transient) from the controller,
-            // which has its description and MasterCategory set.
-            log.info("Incoming category has no ID, assuming new category. Delegating creation to CategoryService.");
-
-            // *** CRITICAL CHANGE HERE: Use the dedicated createCategory method from CategoryService ***
-            // This method handles the uniqueness check for categoryDescription within the menu,
-            // and saving the category. It will throw CONFLICT if a duplicate exists.
-            try {
-                category = categoryService.createCategory(category.getCategoryDescription(), menu);
-                log.info("New/Existing Category resolved by CategoryService. Category ID: {}", category.getId());
-            } catch (ResponseStatusException e) {
-                // If CategoryService's createCategory throws CONFLICT, re-throw it.
-                // Or handle other exceptions like BAD_REQUEST if relevant.
-                log.error("Failed to create/resolve category via CategoryService: {}", e.getReason());
-                throw e; // Re-throw the exception from CategoryService
-            }
-        } else {
-            // This is an EXISTING category by ID. Fetch it to ensure it's managed and valid.
-            Optional<Category> existingCategoryOpt = categoryService.findById(category.getId());
-            if (existingCategoryOpt.isEmpty()) {
-                log.error("Existing category with ID {} not found.", category.getId());
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Existing category not found with ID: " + category.getId());
-            }
-            category = existingCategoryOpt.get(); // Use the managed entity
-
-            // Validate that the existing category belongs to this business's menu
-            if (category.getMenu() == null || !category.getMenu().getId().equals(menu.getId())) {
-                log.error("Existing category ID {} does not belong to menu ID {} for business ID {}",
-                        category.getId(), menu.getId(), businessId);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Existing category with ID " + category.getId() + " does not belong to the menu of business ID " + businessId + ".");
-            }
-            log.info("Using existing category with ID: {}", category.getId());
-        }
-        item.setCategory(category);
-
-
-        item.setMenu(menu);
-
-        if (item.getMasterItem() != null && item.getMasterItem().getId() != null) {
-            MasterItem masterItem = masterItemRepository.findById(item.getMasterItem().getId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + item.getMasterItem().getId()));
-            item.setMasterItem(masterItem);
-        } else {
-            item.setMasterItem(null);
-        }
-
-        if (item.getCreatedDate() == null) {
-            item.setCreatedDate(LocalDateTime.now());
-        }
-        item.setUpdatedDate(LocalDateTime.now());
-
-        Item savedItem = itemRepository.save(item);
-        log.info("Item created successfully with ID: {} and linked to menu ID: {}", savedItem.getId(), menu.getId());
-        return savedItem;
     }
 
-    // ... (rest of ItemService methods like getItemsForBusiness, getItemById, updateItem, deleteItem) ...
+    /**
+     * Creates and saves a new MasterItem or fetches an existing one.
+     */
+    private MasterItem getOrCreateMasterItem(ItemCreationRequest request,Long masterId,Category category) {
+        if (request.getIsNewItem() != null && request.getIsNewItem()) {
+            log.info("isNewItem is true, creating a new MasterItem.");
+            MasterItem newMasterItem = new MasterItem();
+            newMasterItem.setItemName(request.getItemName());
+            newMasterItem.setItemDescription(request.getItemDescription());
+            newMasterItem.setItemImage(request.getItemImage());
+            newMasterItem.setMasterCategory(category.getMasterCategory());
 
+            return masterItemService.createMasterItem(newMasterItem);
+        } else if (request.getMasterItemId() != null) {
+            log.info("isNewItem is false, fetching existing MasterItem with ID: {}", request.getMasterItemId());
+            return masterItemService.getMasterItemById(request.getMasterItemId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Master Item not found with ID: " + request.getMasterItemId()));
+        }
+        return null; // No MasterItem specified or created
+    }
     /**
      * Retrieves all items for a business's menu.
      * @param businessId Business ID.

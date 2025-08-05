@@ -9,6 +9,7 @@ package com.menubyte.service;
 import com.menubyte.entity.MasterCategory;
 import com.menubyte.repository.MasterCategoryRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,12 +18,9 @@ import java.util.Optional;
 @Slf4j
 @Service
 public class MasterCategoryService {
+@Autowired
+    private  MasterCategoryRepository masterCategoryRepository;
 
-    private final MasterCategoryRepository masterCategoryRepository;
-
-    public MasterCategoryService(MasterCategoryRepository masterCategoryRepository) {
-        this.masterCategoryRepository = masterCategoryRepository;
-    }
 
     /**
      * Create a Master Category.

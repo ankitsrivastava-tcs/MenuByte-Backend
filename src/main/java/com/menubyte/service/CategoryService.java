@@ -191,4 +191,7 @@ public class CategoryService {
         categoryRepository.deleteById(categoryId); // Perform the deletion
         log.info("Category with ID: {} deleted successfully.", categoryId);
     }
+    public Optional<Category> findByMenuAndCategoryDescription(Menu menu, String categoryDescription) {
+        return categoryRepository.findByMenuAndCategoryDescription(menu, categoryDescription);
+    }
 }
