@@ -7,6 +7,7 @@
 package com.menubyte.service;
 
 import com.menubyte.entity.User;
+import com.menubyte.exception.UserAlreadyExistsException;
 import com.menubyte.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,24 @@ public class UserService {
      * @param user User entity.
      * @return Created User.
      */
-    public User createUser(User user) {
+    public User createUser(User user)  { // Removed 'throws' as it's a RuntimeException
         log.info("Creating user with email: {}", user.getEmail());
-        return userRepository.save(user);
-    }
+            // Check if a user with the same mobile number already exists
+            Optional<User> existingUserByMobile = userRepository.findByMobileNumber(user.getMobileNumber());
+            if (existingUserByMobile.isPresent()) {
+                throw new UserAlreadyExistsException("A user with this mobile number already exists.");
+            }
+
+            // Check if a user with the same email already exists
+            Optional<User> existingUserByEmail = userRepository.findByEmail(user.getEmail());
+            if (existingUserByEmail.isPresent()) {
+                throw new UserAlreadyExistsException("A user with this email already exists.");
+            }
+
+            // Only if no duplicates are found, save the new user and return the result
+            return userRepository.save(user);
+        }
+
 
     /**
      * Update an existing user.

@@ -7,6 +7,7 @@
 package com.menubyte.controller;
 
 import com.menubyte.entity.User;
+import com.menubyte.exception.UserAlreadyExistsException;
 import com.menubyte.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,10 +32,12 @@ public class UserController {
      * @return The created User object.
      */
     @PostMapping("/signup")
-    public ResponseEntity<User> userSignup(@RequestBody User user) {
-        User createdUser = userService.createUser(user);
-        return new ResponseEntity<>(createdUser,HttpStatus.CREATED);
-    }
+    public ResponseEntity<?> userSignup(@RequestBody User user) {
+
+            User createdUser = userService.createUser(user);
+            return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+
+        }
 
     /**
      * Update User details.
