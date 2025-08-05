@@ -133,13 +133,14 @@ public class ItemController {
 
         newItem.setCategory(category);      // Set the (potentially transient/unsaved for new) Category entity
         newItem.setMasterItem(masterItem);  // Set the resolved MasterItem entity (can be null)
-
         // --- 5. Save Item via Service ---
         // ItemService will handle all the complex logic:
         // - Finding/creating the Menu.
         // - Checking for/saving the Category (and linking to Menu).
         // - Saving the Item.
         Item createdItem = itemService.createItemForBusiness(businessId, newItem);
+       Optional<MasterItem> masterItemCheck= masterItemService.getMasterItemByNameIgnoreCase(createdItem.getItemName());
+
         System.out.println("Item '" + createdItem.getItemName() + "' (ID: " + createdItem.getId() + ") created successfully.");
         return new ResponseEntity<>(createdItem, HttpStatus.CREATED);
     }

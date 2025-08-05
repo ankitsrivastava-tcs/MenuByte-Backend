@@ -17,6 +17,7 @@ public class ItemCreationRequest {
 
     // --- Category Information (mutually exclusive based on isNewCategory) ---
     private Boolean isNewCategory; // Flag to indicate if it's a new category
+    private Boolean   isNewItem;
     private String categoryDescription; // Used if isNewCategory is true (the name of the new category)
     private Long categoryId; // Used if isNewCategory is false (the ID of the existing category)
 
