@@ -2,7 +2,7 @@ services:
   - type: web
     name: menubyte-api
     env: java
-    rootDirectory: menubyte/
+    rootDirectory: MenuByte-Backend/ # This path is now correct
     buildCommand: mvn clean install
     startCommand: java -jar target/menubyte-0.0.1-SNAPSHOT.jar
     envVars:
