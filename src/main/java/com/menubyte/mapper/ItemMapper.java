@@ -84,8 +84,6 @@ public class ItemMapper {
         if (itemDto.getItemDescription() != null) {
             existingItem.setItemDescription(itemDto.getItemDescription());
         }
-        // itemImage and itemAvailability are in Item entity but not in ItemDTO, so they are not mapped here.
-        // If itemAvailability needs to be updated, add it to ItemDTO and map it here.
-        // existingItem.setItemAvailability(itemDto.isItemAvailability());
+            existingItem.setItemAvailability(itemDto.isItemAvailability());
     }
 }
