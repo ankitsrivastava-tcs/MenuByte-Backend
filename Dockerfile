@@ -34,8 +34,8 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 # Copy the built JAR file from the 'builder' stage into the final image.
-# Replace 'menubyte-0.1.0-SNAPSHOT.jar' with your actual JAR file name if different.
-COPY --from=builder /app/target/menubyte-0.1.0-SNAPSHOT.jar ./app.jar
+# --- CORRECTED JAR FILE NAME BASED ON YOUR LOGS ---
+COPY --from=builder /app/target/menubyte-3.1.0.jar ./app.jar
 
 # Expose the port that your Spring Boot application listens on (8080 from application.properties).
 EXPOSE 8080
