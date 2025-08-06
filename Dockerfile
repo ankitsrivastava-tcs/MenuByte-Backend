@@ -21,6 +21,11 @@ COPY src ./src
 # Build the application into an executable JAR.
 RUN mvn package -DskipTests
 
+# --- NEW DEBUGGING STEP: List contents of the target directory ---
+# This command will output the contents of /app/target/ during the build process.
+# Look for the exact name of your generated JAR file here.
+RUN ls -l /app/target/
+
 # Stage 2: Create the final lightweight image for production
 # Uses Eclipse Temurin JRE 17, which is smaller than the JDK and sufficient for running the app
 FROM eclipse-temurin:17-jre-jammy
