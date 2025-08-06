@@ -1,21 +1,10 @@
-# A configuration file for Render's Blueprint deployment.
-
 services:
   - type: web
     name: menubyte-api
     env: java
-    
-    # The directory where your Spring Boot project is located.
-    rootDirectory: MenuByte-Backend/
-    
-    # Build command for Maven.
+    rootDirectory: menubyte/
     buildCommand: mvn clean install
-
-    # Start command. The JAR file name must be exact.
-    # Note: The JAR name is a guess, please verify it.
     startCommand: java -jar target/menubyte-0.0.1-SNAPSHOT.jar
-
-    # Environment variables your application will use.
     envVars:
       - key: DATABASE_URL
         value: "your_database_url_here" 
