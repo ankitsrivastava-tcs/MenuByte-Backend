@@ -6,7 +6,7 @@ services:
     env: java
     
     # The directory where your Java/Spring Boot project is located.
-    rootDirectory: menubyte/ # Example: if your app is in a 'backend' folder
+    rootDirectory: menubyte
 
     # Build command to create the executable JAR file.
     buildCommand: mvn clean install
