@@ -7,7 +7,7 @@ services:
     env: java
     
     # The directory where your Spring Boot project is located.
-    rootDirectory: menubyte/ 
+    rootDirectory: MenuByte-Backend/ 
 
     # Build command for Maven.
     buildCommand: mvn clean install
