@@ -22,6 +22,8 @@ public class MenuService {
 
     private final MenuRepository menuRepository;
     private final BusinessRepository businessRepository;
+    private final BusinessMasterService businessMasterService;
+
     // private final CategoryRepository categoryRepository; // Removed if not directly used here
     // private final MasterCategoryRepository masterCategoryRepository; // Removed if not used by public methods
     private final ItemRepository itemRepository;
@@ -30,12 +32,13 @@ public class MenuService {
                        BusinessRepository businessRepository,
                        CategoryRepository categoryRepository, // Keep if still injected for other methods
                        MasterCategoryRepository masterCategoryRepository, // Keep if still injected for other methods
-                       ItemRepository itemRepository) {
+                       ItemRepository itemRepository,BusinessMasterService businessMasterService) {
         this.menuRepository = menuRepository;
         this.businessRepository = businessRepository;
         // this.categoryRepository = categoryRepository; // Keep if still injected for other methods
         // this.masterCategoryRepository = masterCategoryRepository; // Keep if still injected for other methods
         this.itemRepository = itemRepository;
+        this.businessMasterService=businessMasterService;
     }
 
     /**
@@ -43,6 +46,7 @@ public class MenuService {
      */
     public Menu getMenuForUserBusiness(Long businessId, User user) {
         log.info("Fetching menu for business ID: {} and user ID: {}", businessId, user.getId());
+        businessMasterService.getBusinessesByBusinessID(businessId);
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> {
                     log.error("Business not found with ID: {}", businessId);

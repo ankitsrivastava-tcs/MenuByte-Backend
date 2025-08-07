@@ -23,4 +23,10 @@ public class GlobalExceptionHandler {
         errorResponse.put("message", ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT); // 409 Conflict
     }
+    @ExceptionHandler(BusinessCountException.class)
+    public ResponseEntity<Map<String, String>> handleBusinessCountException(BusinessCountException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("message", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT); // 409 Conflict
+    }
 }

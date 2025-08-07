@@ -19,7 +19,9 @@ public class BusinessMaster { // Consider renaming to BusinessSubscription or Bu
     private double amountPaid;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.SubscriptionStatus subscriptionStatus; // Assuming enum is in enums package
+    private com.menubyte.enums.SubscriptionStatus subscriptionStatus; // Assuming enum is in enums package
+    @Enumerated(EnumType.STRING)
+    private com.menubyte.enums.SubscriptionType subscriptionType;
 
     // No JsonManagedReference/JsonBackReference needed here as it's a one-way relationship for JSON serialization
     @ManyToOne(fetch = FetchType.LAZY)

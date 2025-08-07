@@ -1,6 +1,7 @@
 package com.menubyte.repository;
 
 import com.menubyte.entity.BusinessMaster;
+import com.menubyte.enums.SubscriptionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -24,12 +25,12 @@ public interface BusinessMasterRepository extends JpaRepository<BusinessMaster, 
     /**
      * Finds all BusinessMaster records for a specific Business ID.
      */
-    List<BusinessMaster> findByBusinessId(Long businessId);
+    BusinessMaster findByBusinessId(Long businessId);
 
     /**
      * Finds all BusinessMaster records with a specific SubscriptionStatus.
      */
-    List<BusinessMaster> findBySubscriptionStatus(com.menubyte.entity.SubscriptionStatus status);
+    List<BusinessMaster> findBySubscriptionStatus(SubscriptionStatus status);
 
     /**
      * Finds all BusinessMaster records that are active on a given date.

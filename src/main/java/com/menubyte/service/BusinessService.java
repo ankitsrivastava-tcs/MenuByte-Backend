@@ -8,8 +8,14 @@ package com.menubyte.service;
 
 import com.menubyte.dto.BusinessDTO;
 import com.menubyte.entity.Business;
+import com.menubyte.entity.BusinessMaster;
 import com.menubyte.entity.Menu;
 import com.menubyte.entity.User;
+import com.menubyte.enums.SubscriptionStatus;
+import com.menubyte.enums.SubscriptionType;
+import com.menubyte.exception.BusinessCountException;
+import com.menubyte.exception.UserAlreadyExistsException;
+import com.menubyte.repository.BusinessMasterRepository;
 import com.menubyte.repository.BusinessRepository;
 import com.menubyte.repository.MenuRepository;
 import com.menubyte.repository.UserRepository;
@@ -29,12 +35,17 @@ public class BusinessService {
     private final BusinessRepository businessRepository;
     private final UserRepository  userRepository ;
     private final MenuRepository menuRepository ;
+    private final BusinessMasterRepository businessMasterRepository ;
+    private final BusinessMasterService businessMasterService ;
 
 
-    public BusinessService(BusinessRepository businessRepository, UserRepository userRepository, MenuRepository menuRepository) {
+
+    public BusinessService(BusinessRepository businessRepository, UserRepository userRepository, MenuRepository menuRepository,BusinessMasterRepository businessMasterRepository,BusinessMasterService businessMasterService) {
         this.businessRepository = businessRepository;
         this.userRepository = userRepository;
         this.menuRepository = menuRepository;
+        this.businessMasterRepository=businessMasterRepository;
+        this.businessMasterService=businessMasterService;
     }
 
 
@@ -91,6 +102,8 @@ public class BusinessService {
     public void deleteBusiness(Long id) {
         log.info("Deleting business with ID: {}", id);
         Business business = getBusinessById(id);
+        businessMasterService.deleteBusiness(id);
+
         businessRepository.delete(business);
         log.info("Business deleted successfully with ID: {}", id);
     }
@@ -98,6 +111,7 @@ public class BusinessService {
     public Business createBusiness(long userId,Business business) {
         // Assuming business.getUser() contains at least the ID from the frontend
         // In a real app, you'd get the user from the authenticated context
+        checkBusinessCountAsPerSubscriptionType(userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         business.setUser(user);
@@ -108,6 +122,26 @@ public class BusinessService {
         newMenu.setBusiness(savedBusiness);
         menuRepository.save(newMenu); // Save the new menu
         savedBusiness.setMenu(newMenu); // Link the menu back to the business entity
+
+        BusinessMaster businessMaster= new BusinessMaster();
+        businessMaster.setBusiness(savedBusiness);
+        businessMaster.setUser(user);
+        businessMaster.setAmountPaid(0);
+        businessMaster.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
+        businessMaster.setSubscriptionType(SubscriptionType.TRIAL);
+        businessMaster.setRegisterDate(LocalDate.now());
+        businessMaster.setEndDate(LocalDate.now().plusWeeks(1));
+        businessMasterRepository.save(businessMaster);
         return savedBusiness;
+    }
+
+    private void checkBusinessCountAsPerSubscriptionType(long userId) {
+        List<BusinessMaster> businessMasterList=businessMasterRepository.findByUserId(userId);
+        if(businessMasterList.size()>0) {
+            if (businessMasterList.size() == 1 && businessMasterList.get(0).getSubscriptionType().name().equalsIgnoreCase(String.valueOf(SubscriptionType.TRIAL))) {
+                throw new BusinessCountException("Can not add more than 1 business in Trial version.Buy subscription to proceed.");
+            }
+
+        }
     }
 }

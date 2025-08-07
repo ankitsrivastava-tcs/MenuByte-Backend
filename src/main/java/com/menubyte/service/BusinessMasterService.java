@@ -11,8 +11,10 @@ import com.menubyte.repository.BusinessMasterRepository;
 import com.menubyte.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -54,6 +56,10 @@ public class BusinessMasterService {
         log.info("Fetching businesses for user ID: {}", userId);
         return businessMasterRepository.findByUserId(userId);
     }
+    public BusinessMaster getBusinessesByBusinessID(Long businessID) {
+        log.info("Fetching businesses for user ID: {}", businessID);
+        return businessMasterRepository.findByBusinessId(businessID);
+    }
 
     /**
      * Update subscription details.
@@ -74,4 +80,28 @@ public class BusinessMasterService {
         log.info("Updated subscription details: {}", updatedBusiness);
         return updatedBusiness;
     }
+    /**
+     * Delete a business by ID.
+     * @param businessId Business ID to delete.
+     * @throws RuntimeException if business not found.
+     */
+    @Transactional
+    public void deleteBusiness(Long businessId) {
+        log.info("Attempting to delete business with ID: {}", businessId);
+
+        // Check if business exists
+        BusinessMaster businessOptional = businessMasterRepository.findByBusinessId(businessId);
+        if (null == businessOptional) {
+            log.error("Business with ID {} not found for deletion", businessId);
+            throw new RuntimeException("Business not found with ID: " + businessId);
+        } else {
+            try {
+                businessMasterRepository.deleteById(businessOptional.getId());
+            } catch (Exception e) {
+                log.error("Error deleting business with ID {}: {}", businessId, e.getMessage());
+                throw new RuntimeException("Failed to delete business: " + e.getMessage());
+            }
+        }}
 }
+
+
