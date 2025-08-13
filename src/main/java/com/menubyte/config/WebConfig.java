@@ -43,9 +43,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // Allow all endpoints
-                .allowedOrigins("http://192.168.29.137:3000")// Allow frontend access
+              //  .allowedOrigins("http://192.168.29.137:3000")// Allow frontend access
                 .allowedOrigins("https://menu-byte-ui.vercel.app/") // Allow frontend access
-                .allowedOrigins("https://*.vercel.app") // Allow frontend access
+               // .allowedOrigins("https://*.vercel.app") // Allow frontend access
 //
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allow specified HTTP methods
                 .allowedHeaders("*"); // Allow all headers
