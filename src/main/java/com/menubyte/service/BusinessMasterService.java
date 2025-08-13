@@ -102,6 +102,7 @@ public class BusinessMasterService {
                 throw new RuntimeException("Failed to delete business: " + e.getMessage());
             }
         }}
+
 }
 
 

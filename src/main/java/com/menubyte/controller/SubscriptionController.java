@@ -1,7 +1,9 @@
 package com.menubyte.controller;
 
 import com.menubyte.entity.BusinessMaster;
+import com.menubyte.repository.BusinessMasterRepository;
 import com.menubyte.service.BusinessMasterService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/subscriptions")
 public class SubscriptionController {
+
 
     private final BusinessMasterService businessMasterService;
 
