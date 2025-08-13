@@ -1,4 +1,4 @@
-package com.menubyte.entity;
+package com.menubyte.enums;
 
 public enum VegNonVeg {
     VEG,

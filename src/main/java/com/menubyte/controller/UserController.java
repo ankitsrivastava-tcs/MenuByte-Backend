@@ -33,7 +33,6 @@ public class UserController {
      */
     @PostMapping("/signup")
     public ResponseEntity<?> userSignup(@RequestBody User user) {
-
             User createdUser = userService.createUser(user);
             return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
 
@@ -91,6 +90,7 @@ public class UserController {
         response.put("id", user.getId());
         response.put("username", user.getUsername());
         response.put("mobileNumber", user.getMobileNumber());
+        response.put("userType",user.getUserType());
 
         return ResponseEntity.ok(response);
     }

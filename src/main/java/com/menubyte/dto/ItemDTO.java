@@ -1,7 +1,7 @@
 package com.menubyte.dto;
 
 import com.menubyte.entity.Item;
-import com.menubyte.entity.VegNonVeg;
+import com.menubyte.enums.VegNonVeg;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,6 +22,7 @@ public class ItemDTO {
     private boolean bestseller;
     private boolean itemAvailability; // <-- Added this, your entity has it but DTO didn't
     private String itemDescription;
+    private boolean dealOfTheDay;
 
     private Long masterItemId; // <-- NEW FIELD
 
@@ -35,6 +36,7 @@ public class ItemDTO {
         this.bestseller = item.isBestseller();
         this.itemAvailability = item.isItemAvailability(); // <-- Populate here
         this.itemDescription = item.getItemDescription();
+        this.dealOfTheDay=item.isDealOfTheDay();
         this.masterItemId = item.getMasterItem() != null ? item.getMasterItem().getId() : null; // <-- Populate masterItemId
     }
 }

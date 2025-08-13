@@ -2,7 +2,7 @@ package com.menubyte.dto;
 // src/main/java/com/menubyte/dto/ItemUpdateRequest.java
 
 import com.menubyte.entity.Item; // Import if you need VegOrNonVeg enum
-import com.menubyte.entity.VegNonVeg;
+import com.menubyte.enums.VegNonVeg;
 
 import javax.swing.text.html.parser.Entity;
 

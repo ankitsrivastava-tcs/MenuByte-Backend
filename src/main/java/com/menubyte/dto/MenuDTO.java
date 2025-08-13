@@ -21,6 +21,9 @@ public class MenuDTO {
     private com.menubyte.enums.BusinessType businessType;
     @Enumerated(EnumType.STRING)
     private com.menubyte.enums.SubscriptionStatus subscriptionStatus;
+    @Enumerated(EnumType.STRING)
+    private com.menubyte.enums.UserType userType;
+
     public MenuDTO(Menu menu) {
         this.id = menu.getId();
         this.businessName = menu.getBusiness().getBusinessName();

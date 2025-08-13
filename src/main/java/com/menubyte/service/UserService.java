@@ -36,13 +36,11 @@ public class UserService {
             if (existingUserByMobile.isPresent()) {
                 throw new UserAlreadyExistsException("A user with this mobile number already exists.");
             }
-
             // Check if a user with the same email already exists
             Optional<User> existingUserByEmail = userRepository.findByEmail(user.getEmail());
             if (existingUserByEmail.isPresent()) {
                 throw new UserAlreadyExistsException("A user with this email already exists.");
             }
-
             // Only if no duplicates are found, save the new user and return the result
             return userRepository.save(user);
         }

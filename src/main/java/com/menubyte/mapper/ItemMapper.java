@@ -1,7 +1,7 @@
 package com.menubyte.mapper;
 import com.menubyte.dto.ItemDTO;
 import com.menubyte.entity.Item;
-import com.menubyte.entity.VegNonVeg; // Ensure this import is correct
+import com.menubyte.enums.VegNonVeg; // Ensure this import is correct
 
 /**
  * Mapper class for converting between Item entity and ItemDTO.
@@ -85,5 +85,6 @@ public class ItemMapper {
             existingItem.setItemDescription(itemDto.getItemDescription());
         }
             existingItem.setItemAvailability(itemDto.isItemAvailability());
+        existingItem.setDealOfTheDay(itemDto.isDealOfTheDay());
     }
 }

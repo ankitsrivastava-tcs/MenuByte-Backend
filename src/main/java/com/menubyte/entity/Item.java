@@ -27,11 +27,12 @@ public class Item {
     private String itemImage;
 
     @Enumerated(EnumType.STRING)
-    private com.menubyte.entity.VegNonVeg vegOrNonVeg;
+    private com.menubyte.enums.VegNonVeg vegOrNonVeg;
 
     private boolean itemAvailability;
     private boolean bestseller;
-
+    @Column(name = "dealOfTheDay", nullable = true)
+    private boolean dealOfTheDay;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     @JsonBackReference("item-category-ref")

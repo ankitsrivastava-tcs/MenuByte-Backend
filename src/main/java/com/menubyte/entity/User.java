@@ -1,6 +1,7 @@
 package com.menubyte.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.menubyte.enums.UserType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
@@ -23,8 +24,11 @@ public class User {
     private String password;
     @Column(unique = true) // Added unique constraint
     private String mobileNumber;
-
+    @Column(unique = false) // Added unique constraint
+    @Enumerated(EnumType.STRING)
+    private UserType userType;
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference("user-business-ref") // Unique name for this managed-reference
     private List<Business> businesses;
+
 }

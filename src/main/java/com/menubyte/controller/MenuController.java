@@ -12,6 +12,7 @@ import com.menubyte.entity.BusinessMaster;
 import com.menubyte.entity.Menu;
 import com.menubyte.entity.User;
 import com.menubyte.enums.SubscriptionStatus;
+import com.menubyte.enums.UserType;
 import com.menubyte.service.BusinessMasterService;
 import com.menubyte.service.MenuService;
 import com.menubyte.service.UserService;
@@ -42,10 +43,12 @@ public class MenuController {
      * @return The corresponding MenuDTO object.
      */
     @GetMapping("/{businessId}")
-    public ResponseEntity<MenuDTO> getMenuForUserBusiness(@PathVariable Long businessId, @RequestParam Long userId) {
+    public ResponseEntity<MenuDTO> getMenuForUserBusiness(@PathVariable Long businessId, @RequestParam Long userId,@RequestParam String userType) {
         User user = userService.getUserById(userId);
         Menu menu = menuService.getMenuForUserBusiness(businessId, user);
         MenuDTO menuDTO = new MenuDTO(menu);
+        if(!userType.equalsIgnoreCase(UserType.CUSTOMER.toString()))
+       menuDTO.setUserType(user.getUserType());
         BusinessMaster businessMaster = businessMasterService.getBusinessesByBusinessID(businessId);
         if (null != businessMaster && businessMaster.getSubscriptionStatus().name().equalsIgnoreCase(String.valueOf(SubscriptionStatus.INACTIVE))) {
             menuDTO.setSubscriptionStatus(SubscriptionStatus.INACTIVE);

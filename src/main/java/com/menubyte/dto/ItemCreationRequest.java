@@ -1,7 +1,7 @@
 package com.menubyte.dto;
 
 // src/main/java/com/menubyte/dto/ItemCreationRequest.java
-import com.menubyte.entity.VegNonVeg;
+import com.menubyte.enums.VegNonVeg;
 import lombok.Data; // Assuming Lombok is used
 
 @Data // Generates getters, setters, toString, equals, hashCode
