@@ -23,7 +23,7 @@ public class PaymentController {
         RazorpayClient razorpay = new RazorpayClient("rzp_test_jI5D0vXwBG7OpO", "wwlqWH1r0KWz0p3MC0p9ncwa");
 
         JSONObject orderRequest = new JSONObject();
-        orderRequest.put("amount", request.getAmount() * 100); // amount in paise
+        orderRequest.put("amount", request.getAmount() * 1); // amount in paise
         orderRequest.put("currency", "INR");
         orderRequest.put("receipt", "txn_" + System.currentTimeMillis());
         orderRequest.put("payment_capture", 1);
@@ -63,6 +63,7 @@ public class PaymentController {
                 BusinessMaster businessOptional = businessMasterRepository.findByBusinessId(Long.valueOf(businessId));
                 businessOptional.setSubscriptionType(SubscriptionType.valueOf(planType));
                 businessOptional.setEndDate(businessOptional.getEndDate().plusMonths(Long.valueOf(tenureInMonths)));
+                businessOptional.setAmountPaid(Double.parseDouble(data.get("amountPaid")));
                 businessMasterRepository.save(businessOptional);
                 System.out.println("Payment verified successfully for orderId: {}"+orderId);
                 return new ResponseEntity<>(Map.of("status", "success"), HttpStatus.OK);
