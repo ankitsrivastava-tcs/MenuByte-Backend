@@ -5,11 +5,11 @@ import com.menubyte.entity.Item; // Import if you need VegOrNonVeg enum
 import com.menubyte.enums.VegNonVeg;
 
 import javax.swing.text.html.parser.Entity;
+import java.util.List;
 
 public class ItemUpdateRequest {
     private String itemName;
     private String itemDescription;
-    private Double price; // Ensure this matches your Item entity's price type
     private Double itemDiscount;
     private String itemImage;
     private VegNonVeg vegOrNonVeg; // Use the enum from Item.java if defined there
@@ -17,9 +17,11 @@ public class ItemUpdateRequest {
     private Boolean bestseller;
     private Long categoryId; // This is the key change: accept categoryId directly
     // private Long masterItemId; // Add if you need to update masterItem as well
+    private List<ItemVariantDto> variants;
 
     // Constructor (optional, but good for building in tests)
-    public ItemUpdateRequest() {}
+    public ItemUpdateRequest() {
+    }
 
     // Getters and Setters for all fields
     public String getItemName() {
@@ -36,14 +38,6 @@ public class ItemUpdateRequest {
 
     public void setItemDescription(String itemDescription) {
         this.itemDescription = itemDescription;
-    }
-
-    public Double getPrice() {
-        return price;
-    }
-
-    public void setPrice(Double price) {
-        this.price = price;
     }
 
     public Double getItemDiscount() {
@@ -94,7 +88,14 @@ public class ItemUpdateRequest {
         this.categoryId = categoryId;
     }
 
-    // public Long getMasterItemId() { return masterItemId; }
+    public List<ItemVariantDto> getVariants() {
+        return variants;
+    }
+
+    public void setVariants(List<ItemVariantDto> variants) {
+        this.variants = variants;
+    }
+// public Long getMasterItemId() { return masterItemId; }
     // public void setMasterItemId(Long masterItemId) { this.masterItemId = masterItemId; }
 
     @Override
@@ -102,7 +103,8 @@ public class ItemUpdateRequest {
         return "ItemUpdateRequest{" +
                 "itemName='" + itemName + '\'' +
                 ", itemDescription='" + itemDescription + '\'' +
-                ", price=" + price +
+                // Fix this line
+                ", variants=" + variants +
                 ", itemDiscount=" + itemDiscount +
                 ", vegOrNonVeg=" + vegOrNonVeg +
                 ", itemAvailability=" + itemAvailability +

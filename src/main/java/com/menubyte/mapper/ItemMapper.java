@@ -1,7 +1,11 @@
 package com.menubyte.mapper;
 import com.menubyte.dto.ItemDTO;
+import com.menubyte.dto.ItemVariantDto;
 import com.menubyte.entity.Item;
+import com.menubyte.entity.ItemVariant;
 import com.menubyte.enums.VegNonVeg; // Ensure this import is correct
+
+import java.util.stream.Collectors;
 
 /**
  * Mapper class for converting between Item entity and ItemDTO.
@@ -21,12 +25,23 @@ public class ItemMapper {
         ItemDTO itemDto = new ItemDTO();
         itemDto.setId(item.getId());
         itemDto.setItemName(item.getItemName());
-        itemDto.setPrice(item.getItemPrice()); // Mapping itemPrice from entity to price in DTO
         itemDto.setItemDiscount(item.getItemDiscount());
         itemDto.setVegOrNonVeg(item.getVegOrNonVeg());
         itemDto.setBestseller(item.isBestseller());
         itemDto.setItemDescription(item.getItemDescription());
         // itemImage and itemAvailability are in Item entity but not in ItemDTO, so they are not mapped here.
+        // ADD THIS: Map the variants
+        if (item.getVariants() != null) {
+            itemDto.setVariants(item.getVariants().stream()
+                    .map(variant -> {
+                        ItemVariantDto variantDto = new ItemVariantDto();
+                        variantDto.setVariantName(variant.getVariantName());
+                        variantDto.setPrice(variant.getPrice());
+                        return variantDto;
+                    })
+                    .collect(Collectors.toList()));
+        }
+
         return itemDto;
     }
 
@@ -47,7 +62,6 @@ public class ItemMapper {
         Item item = new Item();
         item.setId(itemDto.getId()); // ID might be null for new items, or present for updates
         item.setItemName(itemDto.getItemName());
-        item.setItemPrice(itemDto.getPrice()); // Mapping price from DTO to itemPrice in entity
         item.setItemDiscount(itemDto.getItemDiscount());
         item.setVegOrNonVeg(itemDto.getVegOrNonVeg());
         item.setBestseller(itemDto.isBestseller());
@@ -55,7 +69,18 @@ public class ItemMapper {
         // itemImage and itemAvailability are in Item entity but not in ItemDTO, so they are not mapped here.
         // itemAvailability needs to be explicitly set if it's not in DTO but required in entity
         // item.setItemAvailability(itemDto.isItemAvailability()); // Assuming ItemDTO has this field if needed
-
+// ADD THIS: Map the variants
+        if (itemDto.getVariants() != null) {
+            item.setVariants(itemDto.getVariants().stream()
+                    .map(variantDto -> {
+                        ItemVariant variant = new ItemVariant();
+                        variant.setVariantName(variantDto.getVariantName());
+                        variant.setPrice(variantDto.getPrice());
+                        variant.setItem(item); // Link back to the Item entity
+                        return variant;
+                    })
+                    .collect(Collectors.toList()));
+        }
         return item;
     }
 
@@ -75,7 +100,6 @@ public class ItemMapper {
         if (itemDto.getItemName() != null) {
             existingItem.setItemName(itemDto.getItemName());
         }
-        existingItem.setItemPrice(itemDto.getPrice()); // Price is a primitive, always update
         existingItem.setItemDiscount(itemDto.getItemDiscount()); // Discount is a primitive, always update
         if (itemDto.getVegOrNonVeg() != null) {
             existingItem.setVegOrNonVeg(itemDto.getVegOrNonVeg());
@@ -86,5 +110,21 @@ public class ItemMapper {
         }
             existingItem.setItemAvailability(itemDto.isItemAvailability());
         existingItem.setDealOfTheDay(itemDto.isDealOfTheDay());
+
+    // ADD THIS: Update variants
+    // Clear existing variants
+    existingItem.getVariants().clear();
+
+    // Add new variants from DTO
+    if (itemDto.getVariants() != null) {
+        existingItem.getVariants().addAll(itemDto.getVariants().stream()
+                .map(variantDto -> {
+                    ItemVariant variant = new ItemVariant();
+                    variant.setVariantName(variantDto.getVariantName());
+                    variant.setPrice(variantDto.getPrice());
+                    variant.setItem(existingItem);
+                    return variant;
+                })
+                .collect(Collectors.toList()));
     }
-}
+}}

@@ -2,6 +2,7 @@ package com.menubyte.controller;
 
 import com.menubyte.dto.ItemCreationRequest;
 import com.menubyte.dto.ItemUpdateRequest;
+import com.menubyte.dto.ItemVariantDto;
 import com.menubyte.entity.Category;
 import com.menubyte.entity.Item;
 import com.menubyte.entity.MasterCategory;
@@ -90,15 +91,6 @@ public class ItemController {
         return ResponseEntity.ok(item);
     }
 
-    /**
-     * Updates an existing item.
-     * The request body uses ItemUpdateRequest DTO for clarity and proper relationship handling.
-     *
-     * @param itemId The ID of the item to update.
-     * @param request The DTO containing updated item details and the category ID.
-     * @return ResponseEntity with the updated Item object and HTTP status 200 (OK).
-     * @throws ResponseStatusException if the item is not found or other validation issues.
-     */
     @PutMapping(value = "/{itemId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Transactional
     public ResponseEntity<Item> updateItem(@PathVariable Long itemId, @RequestBody ItemUpdateRequest request) {
@@ -109,9 +101,21 @@ public class ItemController {
         if (request.getItemName() == null || request.getItemName().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item name cannot be empty.");
         }
-        if (request.getPrice() == null || request.getPrice() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item price must be a positive number.");
+
+        // CORRECTED: Validate the list of variants instead of a single price
+        List<ItemVariantDto> variants = request.getVariants();
+        if (variants == null || variants.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item must have at least one price variant.");
         }
+        for (ItemVariantDto variant : variants) {
+            if (variant.getVariantName() == null || variant.getVariantName().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a name.");
+            }
+            if (variant.getPrice() == null || variant.getPrice() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a positive price.");
+            }
+        }
+
         if (request.getItemDiscount() == null || request.getItemDiscount() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item discount must be a non-negative number.");
         }
@@ -122,7 +126,6 @@ public class ItemController {
         Item updated = itemService.updateItem(itemId, request);
         return ResponseEntity.ok(updated);
     }
-
     /**
      * Deletes an item by its ID.
      *

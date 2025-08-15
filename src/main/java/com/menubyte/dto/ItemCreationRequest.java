@@ -4,6 +4,8 @@ package com.menubyte.dto;
 import com.menubyte.enums.VegNonVeg;
 import lombok.Data; // Assuming Lombok is used
 
+import java.util.List;
+
 @Data // Generates getters, setters, toString, equals, hashCode
 public class ItemCreationRequest {
     private String itemName;
@@ -25,4 +27,6 @@ public class ItemCreationRequest {
     private Long menuId; // The ID of the menu this item belongs to
     private Long masterItemId; // Optional: The ID of the master item if selected
     private Long userId; // The ID of the user (if you still need it in the body)
+    private List<ItemVariantDto> variants;
+
 }

@@ -2,11 +2,9 @@ package com.menubyte.service;
 
 import com.menubyte.dto.ItemCreationRequest;
 import com.menubyte.dto.ItemUpdateRequest;
+import com.menubyte.dto.ItemVariantDto;
 import com.menubyte.entity.*;
-import com.menubyte.repository.BusinessRepository;
-import com.menubyte.repository.ItemRepository;
-import com.menubyte.repository.MasterCategoryRepository;
-import com.menubyte.repository.MasterItemRepository;
+import com.menubyte.repository.*;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -48,7 +47,8 @@ private  ItemRepository itemRepository;
     private  BusinessService businessService;
     @Autowired
     MasterItemService masterItemService;
-
+    @Autowired
+    ItemVariantRepository itemVariantRepository;
     @Transactional
     public Item createItemForBusiness(Long businessId, ItemCreationRequest request) {
         log.info("Starting item creation for business ID: {}", businessId);
@@ -69,6 +69,22 @@ private  ItemRepository itemRepository;
         }
 
         Item savedItem = itemRepository.save(newItem);
+
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
+            List<ItemVariant> variants = request.getVariants().stream()
+                    .map(variantDto -> {
+                        ItemVariant variant = new ItemVariant();
+                        variant.setVariantName(variantDto.getVariantName());
+                        variant.setPrice(variantDto.getPrice());
+                        variant.setItem(savedItem); // Link the variant to the item
+                        return variant;
+                    })
+                    .collect(Collectors.toList());
+            savedItem.setVariants(variants); // Add variants to the item entity
+            //itemVariantRepository.saveAll(variants); // Save all variants
+        }
+
+
         log.info("Item created successfully with ID: {} for business ID: {}", savedItem.getId(), businessId);
         return savedItem;
     }
@@ -130,7 +146,6 @@ private  ItemRepository itemRepository;
         Item newItem = new Item();
         newItem.setItemName(request.getItemName());
         newItem.setItemDescription(request.getItemDescription());
-        newItem.setItemPrice(request.getItemPrice());
         newItem.setItemDiscount(request.getItemDiscount());
         newItem.setItemImage(request.getItemImage());
         newItem.setVegOrNonVeg(request.getVegOrNonVeg());
@@ -139,7 +154,19 @@ private  ItemRepository itemRepository;
         newItem.setCategory(category);
         newItem.setMasterItem(masterItem);
         newItem.setMenu(menu);
-
+// ADD THIS: Map variants from the request to the new Item entity
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
+            List<ItemVariant> variants = request.getVariants().stream()
+                    .map(variantDto -> {
+                        ItemVariant variant = new ItemVariant();
+                        variant.setVariantName(variantDto.getVariantName());
+                        variant.setPrice(variantDto.getPrice());
+                        variant.setItem(newItem); // Link the variant back to the new item
+                        return variant;
+                    })
+                    .collect(Collectors.toList());
+            newItem.setVariants(variants);
+        }
         return newItem;
     }
     // (validateItemCreationRequest method remains the same)
@@ -147,22 +174,34 @@ private  ItemRepository itemRepository;
     /**
      * Extracts and consolidates validation logic for the item creation request.
      */
-    private void validateItemCreationRequest(ItemCreationRequest request) {
+    public void validateItemCreationRequest(ItemCreationRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body cannot be null.");
         }
         if (request.getItemName() == null || request.getItemName().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item name cannot be empty.");
         }
-        if (request.getItemPrice() == null || request.getItemPrice() <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item price must be a positive number.");
+
+        // CORRECTED: Validate the list of variants instead of a single price
+        if (request.getVariants() == null || request.getVariants().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item must have at least one price variant.");
         }
+        for (ItemVariantDto variant : request.getVariants()) {
+            if (variant.getVariantName() == null || variant.getVariantName().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a name.");
+            }
+            if (variant.getPrice() == null || variant.getPrice() <= 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a positive price.");
+            }
+        }
+
         if (request.getItemDiscount() == null || request.getItemDiscount() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item discount must be a non-negative number.");
         }
-        // New validation check for conflicting flags
+
+        // Validation check for conflicting flags (remains the same)
         if (request.getIsNewItem() != null && request.getIsNewItem() && request.getMasterItemId() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create a new master item and provide a master item ID at the same time.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create a new item and provide a master item ID at the same time.");
         }
     }
 
@@ -285,7 +324,6 @@ private  ItemRepository itemRepository;
         // Update basic fields from the DTO
         existingItem.setItemName(request.getItemName());
         existingItem.setItemDescription(request.getItemDescription());
-        existingItem.setItemPrice(request.getPrice());
         existingItem.setItemDiscount(request.getItemDiscount());
         existingItem.setItemImage(request.getItemImage());
         existingItem.setVegOrNonVeg(request.getVegOrNonVeg());
@@ -296,6 +334,23 @@ private  ItemRepository itemRepository;
 
         // Set the resolved Category entity
         existingItem.setCategory(newCategory);
+        // Clear all existing variants to avoid stale data
+        existingItem.getVariants().clear();
+        itemVariantRepository.deleteByItemId(itemId); // You'll need to create this method
+
+        // Create and add new variants from the request
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
+            List<ItemVariant> newVariants = request.getVariants().stream()
+                    .map(variantDto -> {
+                        ItemVariant variant = new ItemVariant();
+                        variant.setVariantName(variantDto.getVariantName());
+                        variant.setPrice(variantDto.getPrice());
+                        variant.setItem(existingItem);
+                        return variant;
+                    })
+                    .collect(Collectors.toList());
+            existingItem.getVariants().addAll(newVariants);
+        }
 
         // Update timestamp
         existingItem.setUpdatedDate(LocalDateTime.now());

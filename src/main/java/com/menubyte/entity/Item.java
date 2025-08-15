@@ -8,6 +8,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -22,7 +24,6 @@ public class Item {
 
     private String itemName;
     private String itemDescription;
-    private double itemPrice;
     private double itemDiscount;
     private String itemImage;
 
@@ -55,4 +56,8 @@ public class Item {
     @LastModifiedDate
     @Column(name = "updated_date", nullable = true)
     private LocalDateTime updatedDate;
+
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ItemVariant> variants = new ArrayList<>();
+
 }
