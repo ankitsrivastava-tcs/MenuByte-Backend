@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,8 +50,7 @@ private  ItemRepository itemRepository;
     MasterItemService masterItemService;
     @Autowired
     ItemVariantRepository itemVariantRepository;
-    @Transactional
-    public Item createItemForBusiness(Long businessId, ItemCreationRequest request) {
+        public Item createItemForBusiness(Long businessId, ItemCreationRequest request) {
         log.info("Starting item creation for business ID: {}", businessId);
 
         validateItemCreationRequest(request);
@@ -190,7 +190,7 @@ private  ItemRepository itemRepository;
             if (variant.getVariantName() == null || variant.getVariantName().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a name.");
             }
-            if (variant.getPrice() == null || variant.getPrice() <= 0) {
+            if (variant.getPrice() == null || variant.getPrice() < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a positive price.");
             }
         }
@@ -370,5 +370,15 @@ private  ItemRepository itemRepository;
         Item item = getItemById(itemId);
         itemRepository.delete(item);
         log.info("Item with ID: {} deleted successfully.", itemId);
+    }
+    // New method to handle bulk item creation
+    @Transactional
+    public List<Item> createBulkItemsForBusiness(Long businessId, List<ItemCreationRequest> requests) {
+        List<Item> createdItems = new ArrayList<>();
+        for (ItemCreationRequest request : requests) {
+            Item createdItem = createItemForBusiness(businessId, request);
+            createdItems.add(createdItem);
+        }
+        return createdItems;
     }
 }

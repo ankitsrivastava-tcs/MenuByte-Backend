@@ -1,5 +1,6 @@
 package com.menubyte.controller;
 
+import com.menubyte.dto.BulkItemCreationRequest;
 import com.menubyte.dto.ItemCreationRequest;
 import com.menubyte.dto.ItemUpdateRequest;
 import com.menubyte.dto.ItemVariantDto;
@@ -57,7 +58,6 @@ public class ItemController {
      * @throws ResponseStatusException if validation fails or entities are not found/conflict.
      */
     @PostMapping(value = "/{businessId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Transactional
     public ResponseEntity<Item> createItem(@PathVariable Long businessId, @RequestBody ItemCreationRequest request) {
         Item createdItem=itemService.createItemForBusiness(businessId,request);
         return new ResponseEntity<>(createdItem, HttpStatus.CREATED);
@@ -111,7 +111,7 @@ public class ItemController {
             if (variant.getVariantName() == null || variant.getVariantName().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a name.");
             }
-            if (variant.getPrice() == null || variant.getPrice() <= 0) {
+            if (variant.getPrice() == null || variant.getPrice() < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "All price variants must have a positive price.");
             }
         }
@@ -138,5 +138,15 @@ public class ItemController {
     public ResponseEntity<Void> deleteItem(@PathVariable Long itemId) {
         itemService.deleteItem(itemId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    /**
+     * Creates multiple new items for a specific business's menu in a single request.
+     * The request body contains a list of ItemCreationRequest objects.
+     */
+    @PostMapping(value = "/bulk", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Transactional
+    public ResponseEntity<List<Item>> createBulkItems(@RequestBody BulkItemCreationRequest request) {
+        List<Item> createdItems = itemService.createBulkItemsForBusiness(request.getBusinessId(), request.getItems());
+        return new ResponseEntity<>(createdItems, HttpStatus.CREATED);
     }
 }

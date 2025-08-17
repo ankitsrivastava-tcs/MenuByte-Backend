@@ -57,7 +57,10 @@ public class Item {
     @Column(name = "updated_date", nullable = true)
     private LocalDateTime updatedDate;
 
-    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ItemVariant> variants = new ArrayList<>();
+    @OneToMany(
+            mappedBy = "item",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true // ADD THIS LINE
+    )    private List<ItemVariant> variants = new ArrayList<>();
 
 }
