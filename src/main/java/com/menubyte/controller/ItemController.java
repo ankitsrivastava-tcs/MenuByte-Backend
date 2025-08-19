@@ -1,9 +1,6 @@
 package com.menubyte.controller;
 
-import com.menubyte.dto.BulkItemCreationRequest;
-import com.menubyte.dto.ItemCreationRequest;
-import com.menubyte.dto.ItemUpdateRequest;
-import com.menubyte.dto.ItemVariantDto;
+import com.menubyte.dto.*;
 import com.menubyte.entity.Category;
 import com.menubyte.entity.Item;
 import com.menubyte.entity.MasterCategory;
@@ -148,5 +145,23 @@ public class ItemController {
     public ResponseEntity<List<Item>> createBulkItems(@RequestBody BulkItemCreationRequest request) {
         List<Item> createdItems = itemService.createBulkItemsForBusiness(request.getBusinessId(), request.getItems());
         return new ResponseEntity<>(createdItems, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/bulk-delete")
+    @Transactional
+    public ResponseEntity<Void> bulkDeleteItems(@RequestBody BulkDeleteRequest request) {
+        if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item IDs list cannot be empty.");
+        }
+
+        // You should add a service method to handle this logic.
+        // For example: itemService.bulkDeleteItem(request.getItemIds(), request.getBusinessId());
+        // For simplicity, here's a direct implementation that iterates and deletes:
+
+        for (Long itemId : request.getItemIds()) {
+            itemService.deleteItem(itemId);
+        }
+
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
