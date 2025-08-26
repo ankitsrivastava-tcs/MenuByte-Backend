@@ -1,5 +1,6 @@
 package com.menubyte.controller;
 import com.menubyte.dto.PaymentRequest;
+import com.menubyte.dto.PaymentVerificationRequest;
 import com.menubyte.entity.BusinessMaster;
 import com.menubyte.enums.SubscriptionType;
 import com.menubyte.repository.BusinessMasterRepository;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 @Slf4j
 @RestController
@@ -77,4 +79,45 @@ public class PaymentController {
         }
     }
 
+    @PostMapping("/verifyPayment")
+    public ResponseEntity<Map<String, Object>> verifyPayment(@RequestBody PaymentVerificationRequest request) {
+        String orderId = request.getRazorpay_order_id();
+        String paymentId = request.getRazorpay_payment_id();
+        String signature = request.getRazorpay_signature();
+
+        if (orderId == null || paymentId == null || signature == null) {
+            return new ResponseEntity<>(Map.of("status", "failed", "message", "Missing required payment details."), HttpStatus.BAD_REQUEST);
+        }
+
+        JSONObject options = new JSONObject();
+        options.put("razorpay_order_id", orderId);
+        options.put("razorpay_payment_id", paymentId);
+        options.put("razorpay_signature", signature);
+
+        try {
+            boolean isVerified = Utils.verifyPaymentSignature(options, "wwlqWH1r0KWz0p3MC0p9ncwa");
+
+            if (isVerified) {
+                // Access data directly from the DTO
+                Long businessId = request.getBusinessId();
+                Long userId = request.getUserId();
+                List<Map<String, Object>> orderItems = request.getOrderItems();
+
+                // Perform your business logic here
+                // Note: Your current code is for subscription payments, but the client code
+                // you provided is for an order. Make sure to adapt the logic.
+                // ...
+
+                System.out.println("Payment verified successfully for orderId: " + orderId);
+                return new ResponseEntity<>(Map.of("status", "success", "message", "Payment verified successfully"), HttpStatus.OK);
+            } else {
+                System.out.println("Payment signature verification failed for orderId: " + orderId);
+                return new ResponseEntity<>(Map.of("status", "failed", "message", "Signature verification failed."), HttpStatus.UNAUTHORIZED);
+            }
+        } catch (Exception e) {
+            System.out.println("An unexpected error occurred during payment verification for orderId: " + orderId);
+            e.printStackTrace(); // It's good practice to print the stack trace for debugging
+            return new ResponseEntity<>(Map.of("status", "failed", "message", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
