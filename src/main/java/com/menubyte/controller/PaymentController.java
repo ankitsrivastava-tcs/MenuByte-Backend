@@ -2,8 +2,10 @@ package com.menubyte.controller;
 import com.menubyte.dto.PaymentRequest;
 import com.menubyte.dto.PaymentVerificationRequest;
 import com.menubyte.entity.BusinessMaster;
+import com.menubyte.entity.OrderItem;
 import com.menubyte.enums.SubscriptionType;
 import com.menubyte.repository.BusinessMasterRepository;
+import com.menubyte.repository.OrderRepository;
 import com.razorpay.*;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -12,14 +14,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
     @Autowired
     BusinessMasterRepository businessMasterRepository;
+    @Autowired
+    OrderRepository orderRepository;
     @PostMapping("/create-order")
     public String createOrder(@RequestBody PaymentRequest request) throws RazorpayException {
         RazorpayClient razorpay = new RazorpayClient("rzp_test_jI5D0vXwBG7OpO", "wwlqWH1r0KWz0p3MC0p9ncwa");
@@ -102,11 +109,37 @@ public class PaymentController {
                 Long businessId = request.getBusinessId();
                 Long userId = request.getUserId();
                 List<Map<String, Object>> orderItems = request.getOrderItems();
+                Number amountNumber = (Number) request.getPaymentDetails().getAmount();
 
-                // Perform your business logic here
-                // Note: Your current code is for subscription payments, but the client code
-                // you provided is for an order. Make sure to adapt the logic.
-                // ...
+                BigDecimal totalAmount = BigDecimal.valueOf(amountNumber.doubleValue());
+
+                // Payment is verified, save the order to the database
+                com.menubyte.entity.Order newOrder = new com.menubyte.entity.Order();
+                newOrder.setRazorpayOrderId(orderId);
+                newOrder.setRazorpayPaymentId(paymentId);
+                newOrder.setBusinessId(request.getBusinessId());
+                newOrder.setUserId(request.getUserId());
+                newOrder.setTotalAmount(new BigDecimal(request.getPaymentDetails().getAmount()));
+                newOrder.setStatus("PAID");
+
+                // Map the list of items from the request to OrderItem entities
+                List<OrderItem> orderItemss = request.getOrderItems().stream()
+                        .map(itemMap -> {
+                            OrderItem item = new OrderItem();
+                            item.setOrder(newOrder); // Set the parent order
+                            item.setItemId(Long.valueOf(itemMap.get("itemId").toString()));
+                            item.setItemName(itemMap.get("itemName").toString());
+                            item.setVariantName(itemMap.get("variantName").toString());
+                            item.setQuantity(Integer.valueOf(itemMap.get("quantity").toString()));
+                            item.setPrice(new BigDecimal(itemMap.get("price").toString()));
+                            return item;
+                        })
+                        .collect(Collectors.toList());
+
+                newOrder.setOrderItems(orderItemss);
+
+                // Save the parent order, which will cascade to save the order items
+                orderRepository.save(newOrder);
 
                 System.out.println("Payment verified successfully for orderId: " + orderId);
                 return new ResponseEntity<>(Map.of("status", "success", "message", "Payment verified successfully"), HttpStatus.OK);
