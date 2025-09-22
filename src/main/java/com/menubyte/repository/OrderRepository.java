@@ -37,4 +37,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "WHERE o.businessId = :businessId AND o.createdAt BETWEEN :startDate AND :endDate " +
             "GROUP BY oi.itemName ORDER BY SUM(oi.quantity) DESC")
     List<TopSellingItemDTO> findTopSellingItemsByBusinessAndPeriod(@Param("businessId") Long businessId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    List<Order> findByBusinessId(Long businessId);
+    List<Order> findByBusinessIdAndCreatedAtBetween(Long businessId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+
 }
