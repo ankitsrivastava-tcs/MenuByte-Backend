@@ -11,6 +11,12 @@
     </parent>
 
     <artifactId>menubyte</artifactId> <!-- Add your project artifactId here -->
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <deeplearning4j.version>1.0.0-M2.1</deeplearning4j.version>
+        <nd4j.version>1.0.0-M2.1</nd4j.version>
+    </properties>
 
     <dependencies>
         <!-- Spring Boot Web -->
@@ -54,6 +60,34 @@
             <artifactId>razorpay-java</artifactId>
             <version>1.4.4</version>
         </dependency>
+
+        <!-- Deeplearning4j dependencies for machine learning -->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-core</artifactId>
+            <version>${deeplearning4j.version}</version>
+        </dependency>
+
+        <!-- ND4J dependencies for numerical computation -->
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-native-platform</artifactId>
+            <version>${nd4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-api</artifactId>
+            <version>${nd4j.version}</version>
+        </dependency>
+
+        <!-- SLF4J for logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.32</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
