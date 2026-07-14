@@ -104,7 +104,7 @@ public class PaymentController {
                         request.getRazorpay_order_id() : "OFFLINE_ORD_" + System.currentTimeMillis();
                 String customPaymentId = request.getRazorpay_payment_id() != null ?
                         request.getRazorpay_payment_id() : "OFFLINE_PAY_" + System.currentTimeMillis();
-
+                newOrder.setTableNumber(request.getTableNumber());
                 newOrder.setRazorpayOrderId(customOfflineId);
                 newOrder.setRazorpayPaymentId(customPaymentId);
                 newOrder.setBusinessId(request.getBusinessId());

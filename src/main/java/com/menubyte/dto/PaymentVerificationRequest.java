@@ -11,6 +11,15 @@ public class PaymentVerificationRequest {
     private List<Map<String, Object>> orderItems;
     private Long businessId;
     private Long userId;
+    private String tableNumber; // Added field
+
+    public String getTableNumber() {
+        return tableNumber;
+    }
+
+    public void setTableNumber(String tableNumber) {
+        this.tableNumber = tableNumber;
+    }
 
     // Getters and Setters for all fields
     public String getRazorpay_payment_id() {

@@ -53,4 +53,6 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_mode", nullable = false)
     private PaymentMode paymentMode = PaymentMode.ONLINE; // Default Online
+    @Column(name = "table_number", nullable = true) // Set nullable=true as not all orders need a table
+    private String tableNumber;
 }
