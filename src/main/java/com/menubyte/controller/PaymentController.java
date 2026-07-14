@@ -3,6 +3,8 @@ import com.menubyte.dto.PaymentRequest;
 import com.menubyte.dto.PaymentVerificationRequest;
 import com.menubyte.entity.BusinessMaster;
 import com.menubyte.entity.OrderItem;
+import com.menubyte.enums.OrderStatus;
+import com.menubyte.enums.PaymentStatus;
 import com.menubyte.enums.SubscriptionType;
 import com.menubyte.repository.BusinessMasterRepository;
 import com.menubyte.repository.OrderRepository;
@@ -88,6 +90,72 @@ public class PaymentController {
 
     @PostMapping("/verifyPayment")
     public ResponseEntity<Map<String, Object>> verifyPayment(@RequestBody PaymentVerificationRequest request) {
+        // --- 1. HANDLE CASH / PAY AT COUNTER DIRECTLY (BYPASS RAZORPAY SIGNATURE CHECK) ---
+        if (request.getPaymentDetails() != null &&
+                ("CASH".equalsIgnoreCase(request.getPaymentDetails().getPaymentMethod()) ||
+                        "PAY_AT_COUNTER".equalsIgnoreCase(request.getPaymentDetails().getPaymentMethod()))) {
+
+            // Inside PaymentController.java under the CASH / PAY_AT_COUNTER block
+            // Inside the CASH / PAY_AT_COUNTER block in PaymentController.java
+            try {
+                com.menubyte.entity.Order newOrder = new com.menubyte.entity.Order();
+
+                String customOfflineId = request.getRazorpay_order_id() != null ?
+                        request.getRazorpay_order_id() : "OFFLINE_ORD_" + System.currentTimeMillis();
+                String customPaymentId = request.getRazorpay_payment_id() != null ?
+                        request.getRazorpay_payment_id() : "OFFLINE_PAY_" + System.currentTimeMillis();
+
+                newOrder.setRazorpayOrderId(customOfflineId);
+                newOrder.setRazorpayPaymentId(customPaymentId);
+                newOrder.setBusinessId(request.getBusinessId());
+                newOrder.setUserId(request.getUserId());
+                newOrder.setTotalAmount(new BigDecimal(request.getPaymentDetails().getAmount()));
+
+                // Set all statuses and modes to prevent validation blocks
+                newOrder.setPaymentStatus(PaymentStatus.PENDING);
+                newOrder.setOrderStatus(com.menubyte.enums.OrderStatus.PENDING);
+
+                // --- SET THE ENUM PAYMENT MODE EXPLICITLY HERE ---
+                if ("PAY_AT_COUNTER".equalsIgnoreCase(request.getPaymentDetails().getPaymentMethod())) {
+                    newOrder.setPaymentMode(com.menubyte.enums.PaymentMode.PAY_AT_COUNTER);
+                } else {
+                    newOrder.setPaymentMode(com.menubyte.enums.PaymentMode.CASH);
+                }
+
+                // Map the items from the request payload to OrderItem entities
+                List<OrderItem> orderItemsList = request.getOrderItems().stream()
+                        .map(itemMap -> {
+                            OrderItem item = new OrderItem();
+                            item.setOrder(newOrder);
+                            item.setItemId(Long.valueOf(itemMap.get("itemId").toString()));
+                            item.setItemName(itemMap.get("itemName").toString());
+                            item.setVariantName(itemMap.get("variantName").toString());
+                            item.setQuantity(Integer.valueOf(itemMap.get("quantity").toString()));
+                            item.setPrice(new BigDecimal(itemMap.get("price").toString()));
+                            return item;
+                        })
+                        .collect(Collectors.toList());
+
+                newOrder.setOrderItems(orderItemsList);
+
+                // Save parent order record
+                com.menubyte.entity.Order savedOrder = orderRepository.save(newOrder);
+
+                System.out.println("Offline Cash Order generated successfully with ID: " + savedOrder.getId());
+                return new ResponseEntity<>(Map.of(
+                        "status", "success",
+                        "message", "Cash order placed successfully",
+                        "orderId", savedOrder.getId()
+                ), HttpStatus.OK);
+
+            } catch (Exception e) {
+                System.out.println("An unexpected error occurred during offline cash order registration");
+                e.printStackTrace();
+                return new ResponseEntity<>(Map.of("status", "failed", "message", "Internal server error processing cash order."), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        // --- 2. EXISTING ONLINE PAYMENT FLOW (RAZORPAY VERIFICATION SYSTEM) ---
         String orderId = request.getRazorpay_order_id();
         String paymentId = request.getRazorpay_payment_id();
         String signature = request.getRazorpay_signature();
@@ -105,28 +173,20 @@ public class PaymentController {
             boolean isVerified = Utils.verifyPaymentSignature(options, "wwlqWH1r0KWz0p3MC0p9ncwa");
 
             if (isVerified) {
-                // Access data directly from the DTO
-                Long businessId = request.getBusinessId();
-                Long userId = request.getUserId();
-                List<Map<String, Object>> orderItems = request.getOrderItems();
-                Number amountNumber = (Number) request.getPaymentDetails().getAmount();
-
-                BigDecimal totalAmount = BigDecimal.valueOf(amountNumber.doubleValue());
-
-                // Payment is verified, save the order to the database
                 com.menubyte.entity.Order newOrder = new com.menubyte.entity.Order();
                 newOrder.setRazorpayOrderId(orderId);
                 newOrder.setRazorpayPaymentId(paymentId);
                 newOrder.setBusinessId(request.getBusinessId());
                 newOrder.setUserId(request.getUserId());
                 newOrder.setTotalAmount(new BigDecimal(request.getPaymentDetails().getAmount()));
-                newOrder.setStatus("PAID");
 
-                // Map the list of items from the request to OrderItem entities
+                // Paid immediately on gate check success
+                newOrder.setPaymentStatus(PaymentStatus.PAID);
+
                 List<OrderItem> orderItemss = request.getOrderItems().stream()
                         .map(itemMap -> {
                             OrderItem item = new OrderItem();
-                            item.setOrder(newOrder); // Set the parent order
+                            item.setOrder(newOrder);
                             item.setItemId(Long.valueOf(itemMap.get("itemId").toString()));
                             item.setItemName(itemMap.get("itemName").toString());
                             item.setVariantName(itemMap.get("variantName").toString());
@@ -137,8 +197,6 @@ public class PaymentController {
                         .collect(Collectors.toList());
 
                 newOrder.setOrderItems(orderItemss);
-
-                // Save the parent order, which will cascade to save the order items
                 orderRepository.save(newOrder);
 
                 System.out.println("Payment verified successfully for orderId: " + orderId);
@@ -149,8 +207,9 @@ public class PaymentController {
             }
         } catch (Exception e) {
             System.out.println("An unexpected error occurred during payment verification for orderId: " + orderId);
-            e.printStackTrace(); // It's good practice to print the stack trace for debugging
+            e.printStackTrace();
             return new ResponseEntity<>(Map.of("status", "failed", "message", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 }

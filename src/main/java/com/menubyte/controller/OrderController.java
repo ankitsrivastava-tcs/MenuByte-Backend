@@ -7,15 +7,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -92,5 +89,31 @@ public class OrderController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
+    }
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<Order> updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestBody Map<String, String> payload) {
+
+        String status = payload.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        return orderService.updateOrderStatus(orderId, status)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+    @PutMapping("/{orderId}/payment-status")
+    public ResponseEntity<Order> updatePaymentStatus(
+            @PathVariable Long orderId,
+            @RequestBody Map<String,String> payload){
+
+        return orderService.updatePaymentStatus(
+                        orderId,
+                        payload.get("paymentStatus"))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+
     }
 }

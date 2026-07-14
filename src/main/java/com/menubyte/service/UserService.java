@@ -63,11 +63,11 @@ public class UserService {
             existingUser.setEmail(updatedUser.getEmail());
             existingUser.setPassword(updatedUser.getPassword());
             existingUser.setMobileNumber(updatedUser.getMobileNumber());
-            existingUser.setCity(updatedUser.getCity());
-            existingUser.setAddress(updatedUser.getAddress());
-            existingUser.setCountry(updatedUser.getCountry());
-            existingUser.setPan(updatedUser.getPan());
-            existingUser.setAadhar(updatedUser.getAadhar());
+//            existingUser.setCity(updatedUser.getCity());
+//            existingUser.setAddress(updatedUser.getAddress());
+//            existingUser.setCountry(updatedUser.getCountry());
+//            existingUser.setPan(updatedUser.getPan());
+//            existingUser.setAadhar(updatedUser.getAadhar());
             return userRepository.save(existingUser);
         } else {
             log.error("User not found with ID: {}", id);

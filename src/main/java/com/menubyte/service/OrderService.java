@@ -10,6 +10,8 @@ import com.lowagie.text.pdf.PdfWriter;
 import com.lowagie.text.Element;
 import com.menubyte.dto.TopSellingItemDTO;
 import com.menubyte.entity.Order;
+import com.menubyte.enums.OrderStatus;
+import com.menubyte.enums.PaymentStatus;
 import com.menubyte.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -219,5 +221,32 @@ public class OrderService {
             e.printStackTrace();
             throw new RuntimeException("Error generating PDF sales report.", e);
         }
+    }
+    public Optional<Order> updateOrderStatus(Long orderId, String newStatus) {
+        Optional<Order> orderOptional = orderRepository.findById(orderId);
+        if (orderOptional.isPresent()) {
+            Order order = orderOptional.get();
+            try {
+                // Converts string "ACCEPTED" -> OrderStatus.ACCEPTED safely
+                order.setOrderStatus(OrderStatus.valueOf(newStatus.toUpperCase()));
+                return Optional.of(orderRepository.save(order));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid order status value: " + newStatus);
+            }
+        }
+        return Optional.empty();
+    }
+    public Optional<Order> updatePaymentStatus(Long id,String paymentStatus){
+
+        return orderRepository.findById(id)
+                .map(order->{
+
+                    order.setPaymentStatus(
+                            PaymentStatus.valueOf(paymentStatus));
+
+                    return orderRepository.save(order);
+
+                });
+
     }
 }

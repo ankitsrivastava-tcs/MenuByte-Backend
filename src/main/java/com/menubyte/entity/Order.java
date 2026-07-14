@@ -1,6 +1,9 @@
 package com.menubyte.entity;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.menubyte.enums.OrderStatus;
+import com.menubyte.enums.PaymentMode;
+import com.menubyte.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -17,10 +20,10 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "razorpay_order_id", unique = true, nullable = false)
+    @Column(name = "razorpay_order_id", unique = true, nullable = true)
     private String razorpayOrderId;
 
-    @Column(name = "razorpay_payment_id", unique = true, nullable = false)
+    @Column(name = "razorpay_payment_id", unique = true, nullable = true)
     private String razorpayPaymentId;
 
     @Column(name = "business_id", nullable = false)
@@ -32,8 +35,14 @@ public class Order {
     @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount;
 
-    @Column(name = "status", nullable = false)
-    private String status;
+    // --- Enum Status Mapping ---
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_status", nullable = false)
+    private OrderStatus orderStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false)
+    private PaymentStatus paymentStatus;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -41,6 +50,7 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<OrderItem> orderItems;
-
-    // Getters and Setters
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_mode", nullable = false)
+    private PaymentMode paymentMode = PaymentMode.ONLINE; // Default Online
 }

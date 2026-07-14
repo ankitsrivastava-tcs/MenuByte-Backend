@@ -51,7 +51,11 @@ public class WebConfig implements WebMvcConfigurer {
             "https://menu-byte-*-ankitsrivastava-tcs-projects.vercel.app",
             
             // 3. Local Development URL
-            "http://localhost:3000"
+            "http://localhost:3000",
+                "https://menubyte-ui.onrender.com",
+                "http://192.168.29.137:3000"
+
+
         )
         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
         .allowedHeaders("*");
