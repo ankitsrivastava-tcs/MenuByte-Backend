@@ -32,11 +32,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "WHERE business_id = :businessId AND created_at BETWEEN :startDate AND :endDate " +
             "GROUP BY CAST(created_at AS DATE) ORDER BY 1 ASC", nativeQuery = true)
     List<Object[]> findDailySalesByBusinessAndPeriod(@Param("businessId") Long businessId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
-    @Query("SELECT new com.menubyte.dto.TopSellingItemDTO(oi.itemName, SUM(oi.quantity)) " +
+    @Query("SELECT new com.menubyte.dto.TopSellingItemDTO(oi.itemId, oi.itemName, SUM(oi.quantity)) " +
             "FROM Order o JOIN o.orderItems oi " +
             "WHERE o.businessId = :businessId AND o.createdAt BETWEEN :startDate AND :endDate " +
-            "GROUP BY oi.itemName ORDER BY SUM(oi.quantity) DESC")
-    List<TopSellingItemDTO> findTopSellingItemsByBusinessAndPeriod(@Param("businessId") Long businessId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+            "GROUP BY oi.itemId, oi.itemName ORDER BY SUM(oi.quantity) DESC")
+    List<TopSellingItemDTO> findTopSellingItemsByBusinessAndPeriod(
+            @Param("businessId") Long businessId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
     List<Order> findByBusinessId(Long businessId);
     List<Order> findByBusinessIdAndCreatedAtBetween(Long businessId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 

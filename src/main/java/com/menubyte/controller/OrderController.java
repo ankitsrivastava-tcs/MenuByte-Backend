@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,26 +68,17 @@ public class OrderController {
     public ResponseEntity<byte[]> generateSalesReport(@PathVariable Long businessId,
                                                       @RequestParam("startDate") String startDate,
                                                       @RequestParam("endDate") String endDate) {
-        try {
-            LocalDate start = LocalDate.parse(startDate);
-            LocalDate end = LocalDate.parse(endDate);
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        byte[] pdfBytes = orderService.generateSalesReport(businessId, start, end);
 
-            // Delegate the PDF generation to the service layer
-            byte[] pdfBytes = orderService.generateSalesReport(businessId, start, end);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        String filename = String.format("sales_report_%s_to_%s.pdf", startDate, endDate);
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(pdfBytes.length);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_PDF);
-            String filename = String.format("sales_report_%s_to_%s.pdf", startDate, endDate);
-            headers.setContentDispositionFormData("attachment", filename);
-            headers.setContentLength(pdfBytes.length);
-
-            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
-
-        } catch (Exception e) {
-            // Log the exception for debugging purposes
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
     @PutMapping("/{orderId}/status")
     public ResponseEntity<Order> updateOrderStatus(
@@ -115,5 +105,21 @@ public class OrderController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
 
+    }
+    /**
+     * Endpoint to fetch the top-selling items for a specific business.
+     * It dynamically checks sales performance over the last 30 days.
+     *
+     * @param businessId The ID of the business.
+     * @return A list of top-selling items wrapped in TopSellingItemDTO.
+     */
+    @GetMapping("/business/{businessId}/top-items")
+    public ResponseEntity<List<com.menubyte.dto.TopSellingItemDTO>> getTopSellingItems(@PathVariable Long businessId) {
+        // Set the analysis range for the last 30 days
+        java.time.LocalDateTime startDateTime = java.time.LocalDateTime.now().minusDays(30);
+        java.time.LocalDateTime endDateTime = java.time.LocalDateTime.now();
+
+        List<com.menubyte.dto.TopSellingItemDTO> topItems = orderService.getTopSellingItems(businessId, startDateTime, endDateTime);
+        return ResponseEntity.ok(topItems);
     }
 }

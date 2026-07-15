@@ -55,4 +55,7 @@ public class Order {
     private PaymentMode paymentMode = PaymentMode.ONLINE; // Default Online
     @Column(name = "table_number", nullable = true) // Set nullable=true as not all orders need a table
     private String tableNumber;
+
+    @Column(name = "order_note", length = 500)
+    private String orderNote;
 }

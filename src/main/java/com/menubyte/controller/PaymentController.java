@@ -76,15 +76,15 @@ public class PaymentController {
                 businessOptional.setEndDate(businessOptional.getEndDate().plusMonths(Long.valueOf(tenureInMonths)));
                 businessOptional.setAmountPaid(Double.parseDouble(data.get("amountPaid")));
                 businessMasterRepository.save(businessOptional);
-                System.out.println("Payment verified successfully for orderId: {}"+orderId);
+                log.info("subscription_payment_verified razorpayOrderId={}", orderId);
                 return new ResponseEntity<>(Map.of("status", "success"), HttpStatus.OK);
             } else {
-                System.out.println("Payment signature verification failed for orderId: {}"+orderId);
+                log.warn("subscription_payment_signature_invalid razorpayOrderId={}", orderId);
                 return new ResponseEntity<>(Map.of("status", "failed", "message", "Signature verification failed."), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception e) {
-            System.out.println("An unexpected error occurred during payment verification for orderId: {}" + orderId);
-            return new ResponseEntity<>(Map.of("status", "failed", "message", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("subscription_payment_verification_failed razorpayOrderId={}", orderId, e);
+            throw new RuntimeException("Subscription payment verification failed.", e);
         }
     }
 
@@ -110,6 +110,7 @@ public class PaymentController {
                 newOrder.setBusinessId(request.getBusinessId());
                 newOrder.setUserId(request.getUserId());
                 newOrder.setTotalAmount(new BigDecimal(request.getPaymentDetails().getAmount()));
+                newOrder.setOrderNote(request.getOrderNote());
 
                 // Set all statuses and modes to prevent validation blocks
                 newOrder.setPaymentStatus(PaymentStatus.PENDING);
@@ -141,7 +142,7 @@ public class PaymentController {
                 // Save parent order record
                 com.menubyte.entity.Order savedOrder = orderRepository.save(newOrder);
 
-                System.out.println("Offline Cash Order generated successfully with ID: " + savedOrder.getId());
+                log.info("offline_order_created orderId={} businessId={}", savedOrder.getId(), request.getBusinessId());
                 return new ResponseEntity<>(Map.of(
                         "status", "success",
                         "message", "Cash order placed successfully",
@@ -149,9 +150,8 @@ public class PaymentController {
                 ), HttpStatus.OK);
 
             } catch (Exception e) {
-                System.out.println("An unexpected error occurred during offline cash order registration");
-                e.printStackTrace();
-                return new ResponseEntity<>(Map.of("status", "failed", "message", "Internal server error processing cash order."), HttpStatus.INTERNAL_SERVER_ERROR);
+                log.error("offline_order_creation_failed businessId={}", request.getBusinessId(), e);
+                throw new RuntimeException("Offline order creation failed.", e);
             }
         }
 
@@ -179,9 +179,11 @@ public class PaymentController {
                 newOrder.setBusinessId(request.getBusinessId());
                 newOrder.setUserId(request.getUserId());
                 newOrder.setTotalAmount(new BigDecimal(request.getPaymentDetails().getAmount()));
+                newOrder.setOrderNote(request.getOrderNote());
 
                 // Paid immediately on gate check success
                 newOrder.setPaymentStatus(PaymentStatus.PAID);
+                newOrder.setOrderStatus(com.menubyte.enums.OrderStatus.PENDING);
 
                 List<OrderItem> orderItemss = request.getOrderItems().stream()
                         .map(itemMap -> {
@@ -199,16 +201,16 @@ public class PaymentController {
                 newOrder.setOrderItems(orderItemss);
                 orderRepository.save(newOrder);
 
-                System.out.println("Payment verified successfully for orderId: " + orderId);
-                return new ResponseEntity<>(Map.of("status", "success", "message", "Payment verified successfully"), HttpStatus.OK);
+
+                log.info("order_payment_verified razorpayOrderId={} businessId={}", orderId, request.getBusinessId());
+                return new ResponseEntity<>(Map.of("status", "success", "message", "Payment verified successfully",  "orderId", newOrder.getId()), HttpStatus.OK);
             } else {
-                System.out.println("Payment signature verification failed for orderId: " + orderId);
+                log.warn("order_payment_signature_invalid razorpayOrderId={}", orderId);
                 return new ResponseEntity<>(Map.of("status", "failed", "message", "Signature verification failed."), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception e) {
-            System.out.println("An unexpected error occurred during payment verification for orderId: " + orderId);
-            e.printStackTrace();
-            return new ResponseEntity<>(Map.of("status", "failed", "message", "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("order_payment_verification_failed razorpayOrderId={} businessId={}", orderId, request.getBusinessId(), e);
+            throw new RuntimeException("Order payment verification failed.", e);
         }
     }
 

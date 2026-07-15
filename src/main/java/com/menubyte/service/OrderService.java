@@ -15,6 +15,7 @@ import com.menubyte.enums.PaymentStatus;
 import com.menubyte.repository.OrderRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -218,7 +220,7 @@ public class OrderService {
 
             return baos.toByteArray();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("sales_report_generation_failed businessId={} startDate={} endDate={}", businessId, startDate, endDate, e);
             throw new RuntimeException("Error generating PDF sales report.", e);
         }
     }
@@ -248,5 +250,11 @@ public class OrderService {
 
                 });
 
+    }
+    /**
+     * Exposes repository data-driven item rankings for a business over a given range.
+     */
+    public List<TopSellingItemDTO> getTopSellingItems(Long businessId, LocalDateTime start, LocalDateTime end) {
+        return orderRepository.findTopSellingItemsByBusinessAndPeriod(businessId, start, end);
     }
 }

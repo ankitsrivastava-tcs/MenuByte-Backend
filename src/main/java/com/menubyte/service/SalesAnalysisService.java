@@ -16,6 +16,7 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.learning.config.Adam;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class SalesAnalysisService {
 
     // Hyperparameters for the neural network
@@ -135,7 +137,7 @@ public class SalesAnalysisService {
 
         // Make a prediction
         double forecast = predictNextDaySales(model, lastSale);
-        System.out.println("Sales Forecast for next day: " + forecast); // Log the prediction
+        log.info("sales_forecast_generated dataPoints={} forecast={}", dailySales.size(), forecast);
         return forecast;
     }
 }

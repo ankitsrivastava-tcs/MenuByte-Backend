@@ -6,7 +6,6 @@
  */
 package com.menubyte.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.menubyte.dto.MenuDTO;
 import com.menubyte.entity.BusinessMaster;
 import com.menubyte.entity.Menu;
@@ -55,13 +54,7 @@ public class MenuController {
         } else {
             menuDTO.setSubscriptionStatus(SubscriptionStatus.ACTIVE);
 
-            try {
-                ObjectMapper objectMapper = new ObjectMapper();
-                String jsonResponse = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(menuDTO);
-                log.info("MenuDTO Response:\n{}", jsonResponse); // Pretty JSON logging
-            } catch (Exception e) {
-                log.error("Error converting MenuDTO to JSON", e);
-            }
+            log.debug("menu_retrieved businessId={} userId={}", businessId, userId);
 
         }
         return ResponseEntity.ok(menuDTO);
@@ -80,7 +73,7 @@ public class MenuController {
             @PathVariable Long businessId,
             @RequestParam Long userId,
             @RequestBody MenuDTO updatedMenu) {
-        System.out.println("Received Update Request: " + updatedMenu); // Debugging
+        log.info("menu_update_requested businessId={} userId={}", businessId, userId);
         User user = userService.getUserById(userId);
         Menu updatedMenuEntity = menuService.updateMenuItems(businessId, user, updatedMenu);
         return ResponseEntity.ok(new MenuDTO(updatedMenuEntity));

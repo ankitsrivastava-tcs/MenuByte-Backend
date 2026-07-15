@@ -12,6 +12,15 @@ public class PaymentVerificationRequest {
     private Long businessId;
     private Long userId;
     private String tableNumber; // Added field
+    private String orderNote;
+
+    public String getOrderNote() {
+        return orderNote;
+    }
+
+    public void setOrderNote(String orderNote) {
+        this.orderNote = orderNote;
+    }
 
     public String getTableNumber() {
         return tableNumber;

@@ -4,7 +4,6 @@ import com.menubyte.dto.BusinessDTO;
 import com.menubyte.entity.Business;
 import com.menubyte.service.BusinessService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -78,14 +77,9 @@ public class BusinessController {
      * @return ResponseEntity containing a list of BusinessDTO objects.
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getBusinessesByUser(@PathVariable Long userId) {
-        try {
-                List<BusinessDTO> businesses = businessService.getBusinessesByUserId(userId);
-            return ResponseEntity.ok(businesses);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error fetching businesses: " + e.getMessage());
-        }
+    public ResponseEntity<List<BusinessDTO>> getBusinessesByUser(@PathVariable Long userId) {
+        List<BusinessDTO> businesses = businessService.getBusinessesByUserId(userId);
+        return ResponseEntity.ok(businesses);
     }
 
     /**
